@@ -40,7 +40,7 @@ export function Clue({ pendingKeys, mappings, scrollTop }: ClueProps) {
 						key={i}
 						flexDirection="row"
 						justifyContent="space-between"
-						style={{ backgroundColor: i % 2 === 0 ? "#1a1b26" : "#16161e" }}
+						style={{ backgroundColor: undefined }}
 					>
 						<text fg="#7aa2f7" style={{ paddingLeft: 1 }}>
 							{m.lhs.slice(pendingKeys.length) || "⏎"}

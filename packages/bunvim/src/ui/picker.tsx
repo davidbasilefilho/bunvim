@@ -205,8 +205,7 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 									key={i}
 									style={{
 										paddingLeft: 1,
-										backgroundColor:
-											i === selectedIndex ? "#292e42" : undefined,
+										backgroundColor: undefined,
 									}}
 								>
 									<text fg={i === selectedIndex ? "#7aa2f7" : "#a9b1d6"}>
