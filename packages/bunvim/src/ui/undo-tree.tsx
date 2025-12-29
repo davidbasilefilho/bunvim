@@ -37,7 +37,10 @@ export function UndoTree({ onRestore, onClose }: UndoTreeProps) {
 			(key.name === "down" || key.name === "j") &&
 			current.children.length > 0
 		) {
-			setSelectedId(current.children[current.children.length - 1]!);
+			const lastChild = current.children[current.children.length - 1];
+			if (lastChild !== undefined) {
+				setSelectedId(lastChild);
+			}
 			return;
 		}
 
@@ -49,7 +52,10 @@ export function UndoTree({ onRestore, onClose }: UndoTreeProps) {
 			if (parent) {
 				const idx = parent.children.indexOf(current.id);
 				if (idx > 0) {
-					setSelectedId(parent.children[idx - 1]!);
+					const prevSibling = parent.children[idx - 1];
+					if (prevSibling !== undefined) {
+						setSelectedId(prevSibling);
+					}
 				}
 			}
 			return;
@@ -63,7 +69,10 @@ export function UndoTree({ onRestore, onClose }: UndoTreeProps) {
 			if (parent) {
 				const idx = parent.children.indexOf(current.id);
 				if (idx < parent.children.length - 1) {
-					setSelectedId(parent.children[idx + 1]!);
+					const nextSibling = parent.children[idx + 1];
+					if (nextSibling !== undefined) {
+						setSelectedId(nextSibling);
+					}
 				}
 			}
 			return;

@@ -3,16 +3,10 @@ import type { KeymapDefinition } from "../api/keymap";
 type ClueProps = {
 	pendingKeys: string;
 	mappings: KeymapDefinition[];
-	onSelect: (lhs: string) => void;
 	scrollTop: number;
 };
 
-export function Clue({
-	pendingKeys,
-	mappings,
-	onSelect,
-	scrollTop,
-}: ClueProps) {
+export function Clue({ pendingKeys, mappings, scrollTop }: ClueProps) {
 	const filtered = mappings.filter((m) => m.lhs.startsWith(pendingKeys));
 
 	if (filtered.length === 0) return null;
@@ -24,7 +18,7 @@ export function Clue({
 			bottom={2}
 			width={40}
 			height={Math.min(12, filtered.length + 2)}
-			backgroundColor="#16161e"
+			backgroundColor="#24283b"
 			flexDirection="column"
 			paddingLeft={1}
 			paddingRight={1}

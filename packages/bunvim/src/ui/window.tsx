@@ -56,7 +56,7 @@ export interface WindowBufferProps extends WindowProps {
 	gutterWidth?: number;
 	onTabClick?: (id: number) => void;
 	onTabClose?: (id: number) => void;
-	editorProps?: any;
+	editorProps?: Record<string, unknown>;
 }
 
 function shortenPath(path: string, maxLen = 40): string {
@@ -128,8 +128,9 @@ function WindowHeader({
 			{gutterPadding}
 			{buffers.map((buf) => (
 				<box
+					role="button"
 					key={buf.id}
-					onMouseDown={(e: any) => {
+					onMouseDown={(e: { button: number }) => {
 						if (e.button === 0) onTabClick?.(buf.id);
 						if (e.button === 1) onTabClose?.(buf.id);
 					}}

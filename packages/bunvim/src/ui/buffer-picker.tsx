@@ -6,7 +6,10 @@ type BufferPickerProps = {
 	onClose: () => void;
 };
 
-export function BufferPicker({ onSelect, onClose }: BufferPickerProps) {
+export function BufferPicker({
+	onSelect: _onSelect,
+	onClose: _onClose,
+}: BufferPickerProps) {
 	const docs = Document.getAll();
 	const [filter, _setFilter] = useState("");
 

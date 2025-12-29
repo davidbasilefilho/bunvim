@@ -3,8 +3,8 @@ import { registry } from "./registry";
 
 export interface Plugin {
 	name: string;
-	setup: () => void | Effect.Effect<void, any, any>;
-	cleanup?: () => void | Effect.Effect<void, any, any>;
+	setup: () => void | Effect.Effect<void, never, never>;
+	cleanup?: () => void | Effect.Effect<void, never, never>;
 }
 
 export function load(pluginName: string) {
@@ -20,7 +20,7 @@ export function load(pluginName: string) {
 	});
 }
 
-export function register(plugin: Plugin): Effect.Effect<void, any, any> {
+export function register(plugin: Plugin): Effect.Effect<void, never, never> {
 	return Effect.gen(function* () {
 		const result = plugin.setup();
 		if (Effect.isEffect(result)) {
@@ -30,7 +30,7 @@ export function register(plugin: Plugin): Effect.Effect<void, any, any> {
 	});
 }
 
-export function unregister(name: string): Effect.Effect<void, any, any> {
+export function unregister(name: string): Effect.Effect<void, never, never> {
 	return Effect.gen(function* () {
 		const plugin = registry.getPlugin(name);
 		if (plugin?.cleanup) {

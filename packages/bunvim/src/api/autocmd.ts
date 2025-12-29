@@ -37,12 +37,12 @@ export type AutocmdArgs = {
 	match: string;
 	buf: number;
 	file: string;
-	data: any;
+	data: unknown;
 };
 
 export type AutocmdCallback = (
 	args: AutocmdArgs,
-) => void | Effect.Effect<void, any, any>;
+) => void | Effect.Effect<void, never, never>;
 
 export type AutocmdOpts = {
 	pattern?: string | string[];
@@ -96,7 +96,7 @@ export function remove(id: number) {
 
 export function trigger(
 	event: AutocmdEvent,
-	opts: { pattern?: string; data?: any } = {},
+	opts: { pattern?: string; data?: unknown } = {},
 ) {
 	for (let i = autocmds.length - 1; i >= 0; i--) {
 		const au = autocmds[i];

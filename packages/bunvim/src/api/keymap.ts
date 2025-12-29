@@ -9,7 +9,7 @@ export type KeymapOptions = {
 	nowait?: boolean;
 };
 
-export type KeymapHandler = () => void | Effect.Effect<void, any, any>;
+export type KeymapHandler = () => void | Effect.Effect<void, never, never>;
 
 export type KeymapDefinition = {
 	mode: string | string[];

@@ -7,7 +7,11 @@ export type HighlightRange = {
 	capture: string;
 };
 
-export const getHighlights = (tree: any, language: any, queryStr: string) =>
+export const getHighlights = (
+	tree: unknown,
+	language: unknown,
+	queryStr: string,
+) =>
 	Effect.gen(function* (_) {
 		if (!isTreeSitterAvailable() || !tree || !language) {
 			return [] as HighlightRange[];
@@ -24,7 +28,7 @@ export const getHighlights = (tree: any, language: any, queryStr: string) =>
 						return [] as HighlightRange[];
 					}
 					const captures = query.captures(tree.rootNode);
-					return captures.map((c: any) => ({
+					return captures.map((c: unknown) => ({
 						start: {
 							line: c.node.startPosition.row,
 							column: c.node.startPosition.column,

@@ -1,4 +1,5 @@
 import * as KeymapApi from "../api/keymap";
+import type { Mode } from "../modes/mode";
 
 export type KeyEvent = {
 	readonly key: string;
@@ -8,13 +9,7 @@ export type KeyEvent = {
 	readonly sequence: string;
 };
 
-export type EditorMode =
-	| { type: "normal" }
-	| { type: "insert" }
-	| { type: "visual"; subtype: "char" | "line" | "block" }
-	| { type: "command"; input: string; prompt?: string }
-	| { type: "operator-pending"; operator: string; count?: number }
-	| { type: "search"; direction: "forward" | "backward"; input: string };
+export type EditorMode = Mode;
 
 export type KeySequenceState = {
 	readonly keys: string[];
@@ -131,13 +126,13 @@ export const processKey = (
 			keyChar = "<C-k>";
 		} else if (keyChar === "l" || keyChar === "\x0c") {
 			keyChar = "<C-l>";
+		} else if (keyChar === "space" || keyChar === " ") {
+			keyChar = "<C-Space>";
 		} else if (keyChar.length === 1) {
 			keyChar = `<C-${key.shift ? keyChar.toUpperCase() : keyChar.toLowerCase()}>`;
 		}
 	} else if (key.meta && keyChar.length === 1) {
 		keyChar = `<M-${key.shift ? keyChar.toUpperCase() : keyChar.toLowerCase()}>`;
-	} else if (key.ctrl && (key.key === "space" || key.key === " ")) {
-		keyChar = "<C-Space>";
 	}
 
 	if (key.ctrl && (key.key === "c" || key.key === "C" || keyChar === "<C-c>")) {

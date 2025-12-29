@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { registerBuiltins } from "../api/builtins";
 import * as Options from "../api/options";
 import { vim } from "../api/vim";
+import { Dialog, DialogItem, DialogList } from "../components/dialog";
 import * as Buffer from "../core/buffer";
 import * as Jumplist from "../core/jumplist";
 import * as Undo from "../core/undo";
@@ -17,7 +18,6 @@ import { getHighlights } from "../treesitter/highlights";
 import { parse } from "../treesitter/parser";
 import { getClassObject, getFunctionObject } from "../treesitter/textobjects";
 import { Clue } from "./clue";
-import { Dialog, DialogItem, DialogList } from "./dialog";
 import { HomeBuffer } from "./home-buffer";
 import { InputPopup } from "./input-popup";
 import { Notifications } from "./notifications";
@@ -35,7 +35,7 @@ type WindowState = {
 	scrollTop: number;
 };
 
-type EditorState = {
+type EditorUiState = {
 	buffers: Buffer.BufferState[];
 	windows: WindowState[];
 	activeWindowId: number;
@@ -69,9 +69,23 @@ type EditorState = {
 const INITIAL_CONTENT =
 	"Welcome to Bunvim!\n\nPress : to enter commands.\nUse <leader>ff to find files.\nUse <leader>f/ to grep project.";
 
+const DEFAULT_WINDOW: WindowState = {
+	id: 0,
+	bufId: 0,
+	bufferIds: [0],
+	cursorLine: 0,
+	cursorColumn: 0,
+	scrollTop: 0,
+};
+
+const DEFAULT_BUFFER: Buffer.BufferState = Buffer.createState("", {
+	type: "scratch",
+	name: "[Default]",
+});
+
 export function EditorView() {
-	const { width, height } = useTerminalDimensions();
-	const [state, setState] = useState<EditorState>(() => {
+	const { width: _width, height } = useTerminalDimensions();
+	const [state, setState] = useState<EditorUiState>(() => {
 		const initialBuffer = Buffer.createState(INITIAL_CONTENT, {
 			type: "scratch",
 			name: "[Home]",
@@ -101,10 +115,13 @@ export function EditorView() {
 	});
 
 	const activeWindow =
-		state.windows.find((w) => w.id === state.activeWindowId) ||
-		state.windows[0]!;
+		state.windows.find((w) => w.id === state.activeWindowId) ??
+		state.windows[0] ??
+		DEFAULT_WINDOW;
 	const activeBuffer =
-		state.buffers.find((b) => b.id === activeWindow.bufId) || state.buffers[0]!;
+		state.buffers.find((b) => b.id === activeWindow.bufId) ??
+		state.buffers[0] ??
+		DEFAULT_BUFFER;
 
 	useEffect(() => {
 		const updateHighlights = async () => {
@@ -131,7 +148,7 @@ export function EditorView() {
 					...s,
 					highlights: {
 						...s.highlights,
-						[activeBuffer.id]: highlights as any,
+						[activeBuffer.id]: highlights as Record<number, unknown[]>,
 					},
 				}));
 			} catch (_e) {}
@@ -174,10 +191,11 @@ export function EditorView() {
 		[editorHeight],
 	);
 
-	const getVisualSelectionText = useCallback((s: EditorState): string => {
+	const getVisualSelectionText = useCallback((s: EditorUiState): string => {
 		if (s.mode.type !== "visual") return "";
-		const win = s.windows.find((w) => w.id === s.activeWindowId)!;
-		const buf = s.buffers.find((b) => b.id === win.bufId)!;
+		const win =
+			s.windows.find((w) => w.id === s.activeWindowId) ?? DEFAULT_WINDOW;
+		const buf = s.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 
 		const startLine = Math.min(s.visualAnchorLine, win.cursorLine);
 		const endLine = Math.max(s.visualAnchorLine, win.cursorLine);
@@ -224,15 +242,17 @@ export function EditorView() {
 
 	const deleteVisualSelection = useCallback(
 		(
-			s: EditorState,
+			s: EditorUiState,
 		): {
 			text: string;
 			newBuffers: Buffer.BufferState[];
+
 			newCursorLine: number;
 			newCursorColumn: number;
 		} => {
-			const win = s.windows.find((w) => w.id === s.activeWindowId)!;
-			const buf = s.buffers.find((b) => b.id === win.bufId)!;
+			const win =
+				s.windows.find((w) => w.id === s.activeWindowId) ?? DEFAULT_WINDOW;
+			const buf = s.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 			if (s.mode.type !== "visual") {
 				return {
 					text: "",
@@ -327,8 +347,9 @@ export function EditorView() {
 	const executeMotion = useCallback(
 		(motionName: string, count = 1) => {
 			setState((s) => {
-				const win = s.windows.find((w) => w.id === s.activeWindowId)!;
-				const buf = s.buffers.find((b) => b.id === win.bufId)!;
+				const win =
+					s.windows.find((w) => w.id === s.activeWindowId) ?? DEFAULT_WINDOW;
+				const buf = s.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 				const pos = { line: win.cursorLine, column: win.cursorColumn };
 				const result = Motions.executeMotion(motionName, buf, pos, count);
 				if (!result) return { ...s, pendingKeys: "" };
@@ -551,7 +572,7 @@ export function EditorView() {
 						? {
 								...w,
 								bufferIds: nextBufferIds,
-								bufId: nextBufferIds[0]!,
+								bufId: nextBufferIds[0] ?? 0,
 								cursorLine: 0,
 								cursorColumn: 0,
 								scrollTop: 0,
@@ -767,8 +788,11 @@ export function EditorView() {
 					for (const buf of fileBuffers) {
 						try {
 							const content = Buffer.getText(buf);
-							await Bun.write(buf.props.path!, content);
-							savedCount++;
+							const path = buf.props.path;
+							if (path) {
+								await Bun.write(path, content);
+								savedCount++;
+							}
 						} catch {
 							failedCount++;
 						}
@@ -896,8 +920,8 @@ export function EditorView() {
 			if (trimmed.startsWith("s/")) {
 				const parts = trimmed.split("/");
 				if (parts.length >= 3) {
-					const pattern = parts[1]!;
-					const replacement = parts[2]!;
+					const pattern = parts[1] ?? "";
+					const replacement = parts[2] ?? "";
 					const global = parts[3]?.includes("g");
 
 					const lineText = Buffer.getLine(
@@ -980,8 +1004,11 @@ export function EditorView() {
 					break;
 				case "mode-change":
 					setState((s) => {
-						const win = s.windows.find((w) => w.id === s.activeWindowId)!;
-						const buf = s.buffers.find((b) => b.id === win.bufId)!;
+						const win =
+							s.windows.find((w) => w.id === s.activeWindowId) ??
+							DEFAULT_WINDOW;
+						const buf =
+							s.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 						if (result.mode.type === "insert" && s.mode.type === "normal") {
 							return { ...s, mode: result.mode };
 						}
@@ -1016,7 +1043,7 @@ export function EditorView() {
 				case "command-update":
 					setState((s) => ({
 						...s,
-						mode: { ...s.mode, input: result.input } as any,
+						mode: { ...s.mode, input: result.input } as typeof s.mode,
 					}));
 					break;
 				case "command-execute":
@@ -1032,8 +1059,9 @@ export function EditorView() {
 
 	const insertChar = useCallback((char: string) => {
 		setState((s) => {
-			const win = s.windows.find((w) => w.id === s.activeWindowId)!;
-			const buf = s.buffers.find((b) => b.id === win.bufId)!;
+			const win =
+				s.windows.find((w) => w.id === s.activeWindowId) ?? DEFAULT_WINDOW;
+			const buf = s.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 			const pos = { line: win.cursorLine, column: win.cursorColumn };
 			const newBuffer = Buffer.insertAt(buf, pos, char);
 			if (!newBuffer) return s;
@@ -1053,8 +1081,9 @@ export function EditorView() {
 
 	const deleteCharBefore = useCallback(() => {
 		setState((s) => {
-			const win = s.windows.find((w) => w.id === s.activeWindowId)!;
-			const buf = s.buffers.find((b) => b.id === win.bufId)!;
+			const win =
+				s.windows.find((w) => w.id === s.activeWindowId) ?? DEFAULT_WINDOW;
+			const buf = s.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 			if (win.cursorColumn === 0 && win.cursorLine === 0) return s;
 
 			let newLine = win.cursorLine;
@@ -1089,8 +1118,9 @@ export function EditorView() {
 
 	const undo = useCallback(() => {
 		setState((s) => {
-			const win = s.windows.find((w) => w.id === s.activeWindowId)!;
-			const buf = s.buffers.find((b) => b.id === win.bufId)!;
+			const win =
+				s.windows.find((w) => w.id === s.activeWindowId) ?? DEFAULT_WINDOW;
+			const buf = s.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 			const newBuffer = Undo.undo(buf);
 			if (!newBuffer) return s;
 			return {
@@ -1102,8 +1132,9 @@ export function EditorView() {
 
 	const redo = useCallback(() => {
 		setState((s) => {
-			const win = s.windows.find((w) => w.id === s.activeWindowId)!;
-			const buf = s.buffers.find((b) => b.id === win.bufId)!;
+			const win =
+				s.windows.find((w) => w.id === s.activeWindowId) ?? DEFAULT_WINDOW;
+			const buf = s.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 			const newBuffer = Undo.redo(buf);
 			if (!newBuffer) return s;
 			return {
@@ -1118,8 +1149,9 @@ export function EditorView() {
 			setState((s) => {
 				if (s.mode.type !== "operator-pending") return s;
 				const operator = s.mode.operator;
-				const win = s.windows.find((w) => w.id === s.activeWindowId)!;
-				const buf = s.buffers.find((b) => b.id === win.bufId)!;
+				const win =
+					s.windows.find((w) => w.id === s.activeWindowId) ?? DEFAULT_WINDOW;
+				const buf = s.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 				const pos = { line: win.cursorLine, column: win.cursorColumn };
 				const motionResult = Motions.executeMotion(motionName, buf, pos, count);
 				if (!motionResult) return { ...s, mode: { type: "normal" } };
@@ -1127,8 +1159,8 @@ export function EditorView() {
 				let start = pos;
 				let end = motionResult.position;
 				if (
-					Buffer.positionToOffset(buf, start)! >
-					Buffer.positionToOffset(buf, end)!
+					(Buffer.positionToOffset(buf, start) ?? 0) >
+					(Buffer.positionToOffset(buf, end) ?? 0)
 				) {
 					[start, end] = [end, start];
 				}
@@ -1197,8 +1229,9 @@ export function EditorView() {
 		(reverse = false) => {
 			setState((s) => {
 				if (!s.lastSearch) return s;
-				const win = s.windows.find((w) => w.id === s.activeWindowId)!;
-				const buf = s.buffers.find((b) => b.id === win.bufId)!;
+				const win =
+					s.windows.find((w) => w.id === s.activeWindowId) ?? DEFAULT_WINDOW;
+				const buf = s.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 
 				let direction = s.lastSearch.direction;
 				if (reverse) {
@@ -1531,11 +1564,18 @@ export function EditorView() {
 	});
 
 	const onMouseScroll = useCallback(
-		(event: any) => {
+		(event: {
+			key?: string;
+			ctrl?: boolean;
+			shift?: boolean;
+			meta?: boolean;
+			alt?: boolean;
+		}) => {
 			const delta = (event.scroll?.delta ?? Options.opt.mouseScrollStep) * 5;
 			setState((s) => {
-				const win = s.windows.find((w) => w.id === s.activeWindowId)!;
-				const buf = s.buffers.find((b) => b.id === win.bufId)!;
+				const win =
+					s.windows.find((w) => w.id === s.activeWindowId) ?? DEFAULT_WINDOW;
+				const buf = s.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 				const maxScroll = Math.max(0, Buffer.lineCount(buf) - editorHeight);
 				const newScroll = Math.max(
 					0,
@@ -1579,8 +1619,9 @@ export function EditorView() {
 		const buildLayout = (wins: WindowState[]): React.ReactNode => {
 			if (wins.length === 0) return null;
 			if (wins.length === 1) {
-				const win = wins[0]!;
-				const buf = state.buffers.find((b) => b.id === win.bufId)!;
+				const win = wins[0] ?? DEFAULT_WINDOW;
+				const buf =
+					state.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 				const windowBuffers: BufferEntry[] = win.bufferIds
 					.map((id) => state.buffers.find((b) => b.id === id))
 					.filter((b): b is Buffer.BufferState => !!b)
@@ -1620,7 +1661,7 @@ export function EditorView() {
 										return {
 											...w,
 											bufferIds: nextBufferIds,
-											bufId: w.bufId === id ? nextBufferIds[0]! : w.bufId,
+											bufId: w.bufId === id ? (nextBufferIds[0] ?? 0) : w.bufId,
 										};
 									}),
 								};
@@ -1642,7 +1683,7 @@ export function EditorView() {
 				);
 			}
 
-			const first = wins[0]!;
+			const first = wins[0] ?? DEFAULT_WINDOW;
 			const rest = wins.slice(1);
 			const direction = wins[1]?.split === "h" ? "column" : "row";
 
@@ -1694,7 +1735,7 @@ export function EditorView() {
 			{state.activePicker && (
 				<Picker
 					source={state.activePicker.source}
-					onSelect={(item: any, split?: "h" | "v") => {
+					onSelect={(item: unknown, split?: "h" | "v") => {
 						if (item.data?.bufId !== undefined) {
 							const bufId = item.data.bufId;
 							setState((s) => ({
@@ -1719,10 +1760,11 @@ export function EditorView() {
 							openFile(item.data.file, split);
 						}
 						if (item.data?.line !== undefined) {
-							const win = state.windows.find(
-								(w) => w.id === state.activeWindowId,
-							)!;
-							const buf = state.buffers.find((b) => b.id === win.bufId)!;
+							const win =
+								state.windows.find((w) => w.id === state.activeWindowId) ??
+								DEFAULT_WINDOW;
+							const buf =
+								state.buffers.find((b) => b.id === win.bufId) ?? DEFAULT_BUFFER;
 							const { line, column } = clampCursor(
 								item.data.line - 1,
 								item.data.col ? item.data.col - 1 : 0,
@@ -1802,7 +1844,7 @@ export function EditorView() {
 				!/^\d+$/.test(state.pendingKeys) && (
 					<Clue
 						pendingKeys={state.pendingKeys}
-						mappings={vim.keymap.get_keymaps() as any}
+						mappings={vim.keymap.get_keymaps() as unknown[]}
 						onSelect={() => {}}
 						scrollTop={state.clueScrollTop}
 					/>

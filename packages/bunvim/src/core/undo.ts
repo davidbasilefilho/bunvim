@@ -9,7 +9,7 @@ export type Edit =
 export type UndoNode = {
 	readonly id: number;
 	readonly parent?: number;
-	readonly children: number[];
+	children: number[];
 	readonly edits: Edit[];
 	readonly timestamp: number;
 };
@@ -46,7 +46,7 @@ export function addEntry(edits: Edit[]) {
 
 	const parent = nodes.get(currentNodeId);
 	if (parent) {
-		(parent as any).children.push(id);
+		parent.children.push(id);
 	}
 
 	nodes.set(id, node);
@@ -61,7 +61,8 @@ export function undo(
 
 	let newState = buffer;
 	for (let i = current.edits.length - 1; i >= 0; i--) {
-		const edit = current.edits[i]!;
+		const edit = current.edits[i];
+		if (!edit) continue;
 		if (edit.type === "insert") {
 			const end = {
 				line: edit.pos.line,
@@ -85,7 +86,8 @@ export function redo(
 	const current = nodes.get(currentNodeId);
 	if (!current || current.children.length === 0) return undefined;
 
-	const nextId = current.children[current.children.length - 1]!;
+	const nextId = current.children[current.children.length - 1];
+	if (nextId === undefined) return undefined;
 	const next = nodes.get(nextId);
 	if (!next) return undefined;
 

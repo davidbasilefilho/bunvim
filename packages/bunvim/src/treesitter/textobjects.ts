@@ -6,7 +6,7 @@ export type TextObjectResult = {
 };
 
 export function getFunctionObject(
-	tree: any,
+	tree: unknown,
 	pos: Position,
 	type: "inner" | "around",
 ): TextObjectResult | undefined {
@@ -41,7 +41,7 @@ export function getFunctionObject(
 			}
 
 			const body = current.namedChildren.find(
-				(c: any) =>
+				(c: unknown) =>
 					c.type.includes("statement_block") || c.type.includes("block"),
 			);
 			if (body) {
@@ -78,7 +78,7 @@ export function getFunctionObject(
 }
 
 export function getClassObject(
-	tree: any,
+	tree: unknown,
 	pos: Position,
 	type: "inner" | "around",
 ): TextObjectResult | undefined {
@@ -113,7 +113,7 @@ export function getClassObject(
 			}
 
 			const body = current.namedChildren.find(
-				(c: any) =>
+				(c: unknown) =>
 					c.type === "class_body" ||
 					c.type === "interface_body" ||
 					c.type.includes("block"),

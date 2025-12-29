@@ -4,8 +4,9 @@ import { Effect } from "effect";
 import * as dirs from "../api/dirs";
 import { runCommand } from "../utils/shell";
 import { isTreeSitterAvailable, TreesitterError } from "./parser";
+import type { TreeSitterGrammar, TreeSitterModule } from "./types";
 
-const grammars = new Map<string, any>();
+const grammars = new Map<string, TreeSitterGrammar>();
 let grammarsInitialized = false;
 
 const initGrammars = (): boolean => {
@@ -14,9 +15,9 @@ const initGrammars = (): boolean => {
 
 	if (!isTreeSitterAvailable()) return false;
 
-	const tryLoad = (name: string, register: (mod: any) => void) => {
+	const tryLoad = (name: string, register: (mod: TreeSitterModule) => void) => {
 		try {
-			const mod = require(name);
+			const mod = require(name) as TreeSitterModule;
 			register(mod);
 		} catch {}
 	};
@@ -27,15 +28,15 @@ const initGrammars = (): boolean => {
 	});
 
 	tryLoad("tree-sitter-javascript", (mod) => {
-		grammars.set("javascript", mod.default || mod);
+		grammars.set("javascript", (mod.default || mod) as TreeSitterGrammar);
 	});
 
 	tryLoad("tree-sitter-json", (mod) => {
-		grammars.set("json", mod.default || mod);
+		grammars.set("json", (mod.default || mod) as TreeSitterGrammar);
 	});
 
 	tryLoad("tree-sitter-markdown", (mod) => {
-		grammars.set("markdown", mod.default || mod);
+		grammars.set("markdown", (mod.default || mod) as TreeSitterGrammar);
 	});
 
 	return grammars.size > 0;
@@ -57,7 +58,7 @@ const languageToPackage: Record<string, string> = {
 	dockerfile: "tree-sitter-dockerfile",
 };
 
-export const registerGrammar = (lang: string, grammar: any) => {
+export const registerGrammar = (lang: string, grammar: TreeSitterGrammar) => {
 	grammars.set(lang, grammar);
 };
 

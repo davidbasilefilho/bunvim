@@ -47,6 +47,7 @@ export function HomeBuffer({ onAction }: { onAction?: (key: string) => void }) {
 				>
 					{KEYBIND_HINTS.map((hint) => (
 						<box
+							role="button"
 							key={hint.key}
 							flexDirection="row"
 							style={{ marginBottom: 1 }}

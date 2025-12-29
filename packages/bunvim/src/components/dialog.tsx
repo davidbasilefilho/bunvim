@@ -1,14 +1,27 @@
 import type React from "react";
-import { Window } from "./window";
+import { Window } from "../ui/window";
 
 type DialogProps = {
 	title: string;
 	description: string;
-	onClose: () => void;
 	children?: React.ReactNode;
 };
 
-export function Dialog({ title, description, onClose, children }: DialogProps) {
+type DialogDescriptionProps = {
+	text: string;
+};
+
+type DialogListProps = {
+	children: React.ReactNode;
+};
+
+type DialogItemProps = {
+	label: string;
+	selected?: boolean;
+	onSelect: () => void;
+};
+
+export function Dialog({ title, description, children }: DialogProps) {
 	return (
 		<Window
 			id={888}
@@ -33,11 +46,11 @@ export function Dialog({ title, description, onClose, children }: DialogProps) {
 	);
 }
 
-export function DialogDescription({ text }: { text: string }) {
+export function DialogDescription({ text }: DialogDescriptionProps) {
 	return <text fg="#c0caf5">{text}</text>;
 }
 
-export function DialogList({ children }: { children: React.ReactNode }) {
+export function DialogList({ children }: DialogListProps) {
 	return (
 		<box flexDirection="column" style={{ marginTop: 1 }}>
 			{children}
@@ -45,17 +58,10 @@ export function DialogList({ children }: { children: React.ReactNode }) {
 	);
 }
 
-export function DialogItem({
-	label,
-	selected,
-	onSelect,
-}: {
-	label: string;
-	selected?: boolean;
-	onSelect: () => void;
-}) {
+export function DialogItem({ label, selected, onSelect }: DialogItemProps) {
 	return (
 		<box
+			role="button"
 			onMouseDown={onSelect}
 			style={{
 				paddingLeft: 1,

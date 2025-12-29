@@ -175,12 +175,20 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 				style={{ backgroundColor: "#16161e" }}
 			>
 				<box
-					height={1}
+					height={3}
 					flexDirection="row"
 					alignItems="center"
-					backgroundColor="#1f2335"
-					paddingLeft={1}
+					backgroundColor="#24283b"
+					paddingLeft={0}
 				>
+					<box
+						style={{
+							width: 1,
+							height: 3,
+							marginRight: 1,
+							backgroundColor: "#7aa2f7",
+						}}
+					/>
 					<text fg="#7aa2f7">❯ </text>
 					<text fg="#c0caf5">{query}</text>
 					<box style={{ width: 1, height: 1, backgroundColor: "#c0caf5" }} />

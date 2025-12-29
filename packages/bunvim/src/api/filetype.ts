@@ -1,3 +1,8 @@
+export type LspSettings = Record<
+	string,
+	string | number | boolean | Record<string, unknown>
+>;
+
 export type FiletypeConfig = {
 	tabstop?: number;
 	shiftwidth?: number;
@@ -6,7 +11,7 @@ export type FiletypeConfig = {
 	formatoptions?: string;
 	lsp?: {
 		server: string;
-		settings?: Record<string, any>;
+		settings?: LspSettings;
 		root_patterns?: string[];
 	};
 	treesitter?: {

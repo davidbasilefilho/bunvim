@@ -2,10 +2,10 @@ import type { Effect } from "effect";
 
 export type PickerItem = {
 	text: string;
-	data?: any;
+	data?: unknown;
 };
 
 export interface PickerSource {
 	name: string;
-	getItems: (query: string) => Effect.Effect<PickerItem[], any, never>;
+	getItems: (query: string) => Effect.Effect<PickerItem[], never, never>;
 }

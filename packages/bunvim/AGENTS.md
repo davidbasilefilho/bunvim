@@ -1,81 +1,7 @@
-# AGENTS.md
+# Bunvim Package AGENTS.md
 
-## Project Overview
-
-**Bunvim** is a Neovim-like terminal editor built with TypeScript and Bun. Native Neovim keybindings, LSP, DAP, and Treesitter support. Effect-TS for all side-effect management. Plugin-first architecture for easy extensibility.
-
-**Executable**: `bvim-<target>` (e.g., `bvim-linux-x64`, `bvim-darwin-arm64`)
-
-### Design Philosophy
-
-Neovim experience in TypeScript. Same keybindings developers already know. Effect-TS everywhere. Bun for performance. Plugins as Bun projects for trivial authoring.
-
-### Visual Language
-
-Brutalist aesthetic. No border radius. Element separation via background color contrast. Sharp edges. Functional over decorative.
-
-## Interaction Guidelines
-
-Be direct, succinct, objective. Favor headings over lists. No em dashes.
-
-### Response Scope
-
-Adhere strictly to the request. Multi-section responses only for complex inquiries.
-
-### Research
-
-Assume user premises are accurate. Prioritize `context7` for docs. Verify latest API usage before implementation.
-
-## Setup
-
-```bash
-bun install
-bun run dev
-```
-
-## Testing
-
-```bash
-bun test
-bun test --watch
-```
-
-## Build
-
-```bash
-bun run build
-```
-
-Produces `bvim-<target>` binaries.
-
-## Tooling Stack
-
-### Constraints
-
-Use `bun` exclusively. Never `npm`, `npx`, or `tsc`. Bun handles package management, execution, and TypeScript without compilation.
-
-### Runtime
-
-`bun` runtime, `bunx --bun` for package execution, Bun Shell (`$`) for shell commands.
-
-### Dependencies
-
-| Purpose | Package | Context7 ID |
-|---------|---------|-------------|
-| UI | `@opentui/core`, `@opentui/react` | `/sst/opentui` |
-| Effects | `effect` | `/effect-ts/effect` |
-| LSP | `ts-lsp-client` | N/A |
-| DAP | `@vscode/debugprotocol`, `@vscode/debugadapter-testsupport` | `/websites/microsoft_github_io_debug-adapter-protocol` |
-| Treesitter | `tree-sitter` (native bindings) | `/tree-sitter/tree-sitter` |
-| Runtime | `bun` | `/oven-sh/bun` |
-
-### Testing and Quality
-
-`bun test` for testing. `biome` for linting/formatting. `jdx mise` for version management.
-
-### CLI Tools
-
-`rg` instead of `grep`. `fd` instead of `find`.
+This file contains specific architectural details and guidelines for the `bunvim` package.
+Refer to the root `AGENTS.md` for project-wide standards.
 
 ## Architecture
 
@@ -310,6 +236,7 @@ src/
   theme/         # Theme schema, loader, manager
   managers/      # LSP and DAP server managers
   ui/            # OpenTUI components
+  components/    # Reusable generic UI components (Button, Input, etc)
   commands/      # Command registry and implementations
   utils/         # Rope, position, diff, encoding
 index.tsx        # Entry point
@@ -318,6 +245,15 @@ index.tsx        # Entry point
 ## Coding Standards
 
 Minimal, readable, performant code.
+
+### File Structure Ordering
+
+Files should generally follow this order:
+1. Imports
+2. Types/Interfaces
+3. Constants
+4. Functions/Implementation
+5. Exports
 
 ### Documentation
 
@@ -421,7 +357,3 @@ const cancelParse = (fiber: Fiber.RuntimeFiber<ParseResult, ParseError>) =>
 | Files | Validate paths, prevent traversal |
 | Config | Only run trusted configs |
 | LSP/DAP | Validate server binaries |
-
-## User Experience
-
-Keyboard-first design. Every feature accessible via keyboard. Modal editing is primary interaction. Neovim users should feel at home immediately.

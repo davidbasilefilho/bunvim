@@ -4,8 +4,8 @@ export type Mode =
 	| { type: "normal" }
 	| { type: "insert" }
 	| { type: "visual"; subtype: "char" | "line" | "block" }
-	| { type: "command"; input: string }
-	| { type: "search"; direction: "forward" | "backward"; pattern: string }
+	| { type: "command"; input: string; prompt?: string }
+	| { type: "search"; direction: "forward" | "backward"; input: string }
 	| { type: "operator-pending"; operator: string; count: number | undefined };
 
 export type ModeType = Mode["type"];
@@ -15,14 +15,18 @@ export const insert = (): Mode => ({ type: "insert" });
 export const visual = (): Mode => ({ type: "visual", subtype: "char" });
 export const visualLine = (): Mode => ({ type: "visual", subtype: "line" });
 export const visualBlock = (): Mode => ({ type: "visual", subtype: "block" });
-export const command = (input = ""): Mode => ({ type: "command", input });
+export const command = (input = "", prompt?: string): Mode => ({
+	type: "command",
+	input,
+	prompt,
+});
 export const search = (
 	direction: "forward" | "backward",
-	pattern = "",
+	input = "",
 ): Mode => ({
 	type: "search",
 	direction,
-	pattern,
+	input,
 });
 
 export const operatorPending = (
@@ -54,7 +58,7 @@ export const isSearch = (
 ): mode is {
 	type: "search";
 	direction: "forward" | "backward";
-	pattern: string;
+	input: string;
 } => mode.type === "search";
 
 export const isOperatorPending = (
@@ -109,9 +113,7 @@ export const indicator = (mode: Mode): string => {
 		case "command":
 			return `:${mode.input}`;
 		case "search":
-			return mode.direction === "forward"
-				? `/${mode.pattern}`
-				: `?${mode.pattern}`;
+			return mode.direction === "forward" ? `/${mode.input}` : `?${mode.input}`;
 		case "operator-pending":
 			return "";
 	}

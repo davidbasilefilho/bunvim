@@ -8,16 +8,22 @@
 			"outputs": [".next/**", "!.next/cache/**", "bin/**"]
 		},
 		"lint": {
-			"dependsOn": ["^lint"]
+			"dependsOn": ["^lint"],
+			"outputs": []
 		},
 		"format": {
-			"dependsOn": ["^format"]
+			"dependsOn": ["^format"],
+			"outputs": []
 		},
 		"check": {
-			"dependsOn": ["^check"]
+			"dependsOn": ["^check"],
+			"outputs": []
 		},
 		"check-types": {
 			"dependsOn": ["^check-types"]
+		},
+		"test": {
+			"dependsOn": ["^build"]
 		},
 		"dev": {
 			"cache": false,

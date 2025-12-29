@@ -10,7 +10,7 @@ export type Document = {
 	path?: string;
 	language: string;
 	dirty: boolean;
-	tree?: Tree;
+	tree?: Tree | unknown;
 };
 
 let nextDocId = 1;
@@ -35,7 +35,7 @@ export const updateTree = (doc: Document) =>
 		const grammar = yield* _(getGrammar(doc.language));
 		const content = Buffer.getText(doc.buffer);
 		const tree = yield* _(parse(content, grammar));
-		(doc as any).tree = tree;
+		(doc as { tree?: unknown }).tree = tree;
 	});
 
 export function get(id: number): Document | undefined {

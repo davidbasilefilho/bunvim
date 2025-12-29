@@ -1,12 +1,18 @@
 import { Data, Effect } from "effect";
+import type {
+	TreeSitterLanguage,
+	TreeSitterModule,
+	TreeSitterParser,
+	TreeSitterTree,
+} from "./types";
 
 export class TreesitterError extends Data.TaggedError("TreesitterError")<{
 	readonly message: string;
 	readonly cause?: unknown;
 }> {}
 
-let Parser: any = null;
-let parser: any = null;
+let Parser: { new (): TreeSitterParser } | null = null;
+let parser: TreeSitterParser | null = null;
 let treeSitterAvailable: boolean | null = null;
 
 const initTreeSitter = (): boolean => {
@@ -27,7 +33,7 @@ export const isTreeSitterAvailable = (): boolean => {
 	return initTreeSitter();
 };
 
-export const getParser = (): any | undefined => {
+export const getParser = (): TreeSitterParser | undefined => {
 	if (!isTreeSitterAvailable() || !Parser) {
 		return undefined;
 	}
@@ -42,7 +48,7 @@ export const getParser = (): any | undefined => {
 	return parser;
 };
 
-export const parse = (content: string, language: any) =>
+export const parse = (content: string, language: TreeSitterLanguage) =>
 	Effect.gen(function* (_) {
 		if (!isTreeSitterAvailable()) {
 			return yield* _(

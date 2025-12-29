@@ -2,7 +2,7 @@ import type { Effect } from "effect";
 
 export type CommandHandler = (
 	args: string,
-) => void | Effect.Effect<void, any, any>;
+) => void | Effect.Effect<void, never, never>;
 
 export type CommandDefinition = {
 	name: string;
