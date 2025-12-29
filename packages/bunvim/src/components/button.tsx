@@ -18,7 +18,7 @@ export function Button({
 	children,
 	variant = "primary",
 	size = "medium",
-	type = "button",
+	type: _type = "button",
 	disabled = false,
 	loading = false,
 	onClick,
@@ -65,8 +65,8 @@ export function Button({
 	};
 
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: role is not supported by BoxProps but we need interactivity
 		<box
-			role="button"
 			flexDirection="row"
 			alignItems="center"
 			justifyContent="center"

@@ -16,8 +16,8 @@ export function Input({
 	size = "medium",
 	disabled = false,
 	value = "",
-	name,
-	onChange,
+	name: _name,
+	onChange: _onChange,
 	placeholder,
 }: InputProps) {
 	const getHeight = () => {

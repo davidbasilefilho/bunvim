@@ -18,8 +18,8 @@ export function Scrollable({
 
 	return (
 		<box
-			width={width as any}
-			height={height as any}
+			width={width as never}
+			height={height as never}
 			flexDirection="row"
 			style={{ overflow: "hidden" }} // Hypothetical style property or behavior
 		>
