@@ -1,10 +1,8 @@
 # AGENTS.md
 
-## Project Overview
+## AGENTS Guidelines for This Repository
 
 **Bunvim** is a Neovim-like terminal editor built with TypeScript and Bun. Native Neovim keybindings, LSP, DAP, and Treesitter support. Effect-TS for all side-effect management. Plugin-first architecture for easy extensibility.
-
-**Executable**: `bvim-<target>` (e.g., `bvim-linux-x64`, `bvim-darwin-arm64`)
 
 ### Design Philosophy
 
@@ -14,7 +12,29 @@ Neovim experience in TypeScript. Same keybindings developers already know. Effec
 
 Brutalist aesthetic. No border radius. Element separation via background color contrast. Sharp edges. Functional over decorative.
 
-## Interaction Guidelines
+## Useful Commands Recap
+
+### Setup
+
+```bash
+bun install
+bun run dev
+```
+
+### Testing
+
+```bash
+bun test
+bun test --watch
+```
+
+### Build
+
+```bash
+mise run build
+```
+
+### Interaction Guidelines
 
 Be direct, succinct, objective. Favor headings over lists. No em dashes.
 
@@ -25,28 +45,6 @@ Adhere strictly to the request. Multi-section responses only for complex inquiri
 ### Research
 
 Assume user premises are accurate. Prioritize `context7` for docs. Verify latest API usage before implementation.
-
-## Setup
-
-```bash
-bun install
-bun run dev
-```
-
-## Testing
-
-```bash
-bun test
-bun test --watch
-```
-
-## Build
-
-```bash
-bun run build
-```
-
-Produces `bvim-<target>` binaries.
 
 ## Tooling Stack
 
@@ -71,7 +69,7 @@ Use `bun` exclusively. Never `npm`, `npx`, or `tsc`. Bun handles package managem
 
 ### Testing and Quality
 
-`bun test` for testing. `biome` for linting/formatting. `jdx mise` for version management.
+`bun test` for testing. `biome` for linting/formatting. `jdx mise` for version management and task running.
 
 ### CLI Tools
 

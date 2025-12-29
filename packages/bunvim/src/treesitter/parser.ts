@@ -1,10 +1,5 @@
 import { Data, Effect } from "effect";
-import type {
-	TreeSitterLanguage,
-	TreeSitterModule,
-	TreeSitterParser,
-	TreeSitterTree,
-} from "./types";
+import type { TreeSitterLanguage, TreeSitterParser } from "./types";
 
 export class TreesitterError extends Data.TaggedError("TreesitterError")<{
 	readonly message: string;

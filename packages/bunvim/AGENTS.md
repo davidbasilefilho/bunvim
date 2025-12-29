@@ -1,7 +1,26 @@
-# Bunvim Package AGENTS.md
+# AGENTS.md (Package: bunvim)
+
+## AGENTS Guidelines for This Repository
 
 This file contains specific architectural details and guidelines for the `bunvim` package.
 Refer to the root `AGENTS.md` for project-wide standards.
+
+## Useful Commands Recap
+
+### Build
+
+```bash
+mise run build
+mise run build:all
+mise run build:debug
+```
+
+### Check & Lint
+
+```bash
+bun run check
+bun run lint
+```
 
 ## Architecture
 

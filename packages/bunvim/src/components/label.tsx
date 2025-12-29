@@ -1,5 +1,3 @@
-import type React from "react";
-
 export type LabelProps = {
 	text: string;
 	htmlFor?: string; // TUI doesn't really use htmlFor, but for API compatibility

@@ -1,5 +1,3 @@
-import type React from "react";
-
 type InputType = "text" | "password" | "email" | "number";
 type InputSize = "small" | "medium" | "large";
 
