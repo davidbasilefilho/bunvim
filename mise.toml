@@ -1,5 +1,3 @@
-experimental_monorepo_root = true
-
 [tools]
 bun = "1.3.5"
 biome = "latest"
