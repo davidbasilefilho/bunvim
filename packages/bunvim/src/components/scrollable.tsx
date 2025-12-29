@@ -2,8 +2,8 @@ import type React from "react";
 
 export type ScrollableProps = {
 	children: React.ReactNode;
-	height?: number | string;
-	width?: number | string;
+	height?: number | "auto" | `${number}%`;
+	width?: number | "auto" | `${number}%`;
 };
 
 export function Scrollable({
@@ -18,8 +18,8 @@ export function Scrollable({
 
 	return (
 		<box
-			width={width as never}
-			height={height as never}
+			width={width}
+			height={height}
 			flexDirection="row"
 			style={{ overflow: "hidden" }} // Hypothetical style property or behavior
 		>
