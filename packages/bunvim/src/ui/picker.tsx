@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import { useEffect, useMemo, useState } from "react";
 import { fuzzyMatch } from "../picker/fuzzy";
 import type { PickerItem, PickerSource } from "../picker/source";
+import { getColors } from "../theme/manager";
 import { detectLanguage, getGrammar } from "../treesitter/grammars";
 import type { HighlightRange } from "../treesitter/highlights";
 import { getHighlights } from "../treesitter/highlights";
@@ -17,6 +18,7 @@ type PickerProps = {
 };
 
 export function Picker({ source, onSelect, onClose }: PickerProps) {
+	const colors = getColors();
 	const [query, setQuery] = useState("");
 	const [items, setItems] = useState<PickerItem[]>([]);
 	const [selectedIndex, setSelectedIndex] = useState(0);
@@ -172,13 +174,13 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 			<box
 				flexGrow={1}
 				flexDirection="column"
-				style={{ backgroundColor: "#16161e" }}
+				style={{ backgroundColor: colors.picker.bg }}
 			>
 				<box
 					height={3}
 					flexDirection="row"
 					alignItems="center"
-					backgroundColor="#24283b"
+					backgroundColor={colors.surface}
 					paddingLeft={0}
 				>
 					<box
@@ -186,19 +188,21 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 							width: 1,
 							height: 3,
 							marginRight: 1,
-							backgroundColor: "#7aa2f7",
+							backgroundColor: colors.picker.prompt,
 						}}
 					/>
-					<text fg="#7aa2f7">❯ </text>
-					<text fg="#c0caf5">{query}</text>
-					<box style={{ width: 1, height: 1, backgroundColor: "#c0caf5" }} />
+					<text fg={colors.picker.prompt}>❯ </text>
+					<text fg={colors.picker.fg}>{query}</text>
+					<box
+						style={{ width: 1, height: 1, backgroundColor: colors.cursor }}
+					/>
 				</box>
 				<box flexGrow={1} flexDirection="row">
 					<box flexGrow={1} flexBasis={0} flexDirection="column" padding={1}>
 						{loading ? (
-							<text fg="#565f89">Loading...</text>
+							<text fg={colors.muted}>Loading...</text>
 						) : filteredItems.length === 0 ? (
-							<text fg="#565f89">No results</text>
+							<text fg={colors.muted}>No results</text>
 						) : (
 							filteredItems.slice(0, 30).map((item, i) => (
 								<box
@@ -208,7 +212,13 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 										backgroundColor: undefined,
 									}}
 								>
-									<text fg={i === selectedIndex ? "#7aa2f7" : "#a9b1d6"}>
+									<text
+										fg={
+											i === selectedIndex
+												? colors.picker.selection.fg
+												: colors.fg
+										}
+									>
 										{i === selectedIndex ? "❯ " : "  "}
 										{item.text}
 									</text>
@@ -221,14 +231,14 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 							flexGrow={1}
 							flexBasis={0}
 							flexDirection="column"
-							backgroundColor="#1a1b26"
+							backgroundColor={colors.bg}
 							paddingLeft={1}
 						>
 							{previewLoading ? (
-								<text fg="#565f89">Loading preview...</text>
+								<text fg={colors.muted}>Loading preview...</text>
 							) : (
 								previewContent.slice(0, 40).map((line, i) => (
-									<text key={i} fg="#a9b1d6">
+									<text key={i} fg={colors.fg}>
 										{line.slice(0, 80) || " "}
 									</text>
 								))

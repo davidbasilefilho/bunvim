@@ -1,14 +1,27 @@
-1. make sure there aren't duplicated/too similar types that can be one, merge them.
-2. order inside file should be: imports; types/interfaces; constants; functions; exports. (update agents.md file with these rules too)
-3. separate ./packages/bunvim/AGENTS.md and ./AGENTS.md, to separate scopes (project-wide vs package-specific). Update references accordingly.
-4. create a components directory in the bunvim package, and move all the reusable components there.
-5. create components:
-  - <button> component with variants (primary, secondary, danger), sizes (small, medium, large), types (button, which is the default, submit, reset), disabled state, loading state, onClick handler and mouse support.
-  - <input> component with types (text, password, email, number), sizes (small, medium, large), disabled state, value, name and onChange handler.
-  - <label> component with text prop, for prop and optional required (as boolean that adds it) indicator.
-  - <scrollable> component that adds a styled scrollbar to its children, with optional props for height, width (default is full parent height/width).
-6. create a path alias in the bunvim package tsconfig file for the src/ directory @ to make imports cleaner. and use it in the package.
-7. polish/revamp the ui throughout the project to have a consistent modern look. make the pickers/clue have the same background color as the cmd input prompt component. make it pretty/consistent and with good alignment and spacing.
-8. tell the project agents.md file to always use todo tools for complex tasks.
+# Task: Fix LSP Diagnostics in Refactored UI Components
 
-do these in the best order you see fit, it doesn't have to be in this specific one I laid out. make sure to test everything after each step to ensure nothing is broken.
+I have just refactored the following files to use a new semantic theme system:
+- `packages/bunvim/src/ui/editor-buffer.tsx`
+- `packages/bunvim/src/ui/picker.tsx`
+- `packages/bunvim/src/ui/clue.tsx`
+
+The specific changes involved replacing hardcoded colors with calls to `getColors()` from `packages/bunvim/src/theme/manager.ts`, and using the new semantic properties defined in the `Theme` interface in `packages/bunvim/src/theme/builtin.ts` (e.g., `colors.picker.bg`, `colors.success`, etc.).
+
+**Your Goal:**
+Check these files for LSP diagnostics/TypeScript errors and fix them.
+
+**Context:**
+1.  **theme/builtin.ts**: The `Theme` interface was updated to include new semantic keys (e.g., `picker`, `clue`, `surface`, `overlay`, etc.).
+2.  **theme/manager.ts**: Exports `getColors()` which returns `currentTheme.colors`.
+3.  **UI Components**: I refactored them to use `const colors = getColors();` and then access `colors.picker.bg`, etc.
+
+**Potential Issues:**
+- `getColors` might not be imported correctly in some files.
+- The `Theme` interface update might not be fully propagating if `getColors` return type wasn't inferred correctly (though it should be).
+- In `picker.tsx`, I might have placed imports in the wrong spot (I see a potential issue in the diff usage where `import { getColors } ...` was added mid-file in the view, though I tried to place it at the top). Check for syntax errors or misplaced imports.
+- In `editor-buffer.tsx`, I added a `captureColors` object mapping highlight captures to theme colors. Ensure the types for keys align with what's expected.
+
+**Instructions:**
+1.  Verify the imports in `packages/bunvim/src/ui/picker.tsx`. I may have accidentally pasted the import statement in the middle of the file.
+2.  Run a type check or verify the files manually to ensure all properties accessed on `colors` (like `colors.picker`, `colors.clue`) actually exist on the returned type of `getColors()`.
+3.  Fix any syntax errors or type errors found in the three files listed above.

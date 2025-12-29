@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import * as Options from "../api/options";
 import * as Buffer from "../core/buffer";
 import type * as Keymap from "../keybindings/keymap";
+import { getColors } from "../theme/manager";
 import type { HighlightRange } from "../treesitter/highlights";
 
 type PaneProps = {
@@ -20,30 +21,6 @@ type PaneProps = {
 	highlights?: HighlightRange[];
 };
 
-const CAPTURE_COLORS: Record<string, string> = {
-	keyword: "#bb9af7",
-	string: "#9ece6a",
-	comment: "#565f89",
-	function: "#7aa2f7",
-	variable: "#c0caf5",
-	type: "#2ac3de",
-	constant: "#ff9e64",
-	number: "#ff9e64",
-	operator: "#89ddff",
-	property: "#7aa2f7",
-	parameter: "#e0af68",
-	label: "#7aa2f7",
-	"variable.builtin": "#bb9af7",
-	"variable.parameter": "#e0af68",
-	"function.builtin": "#7aa2f7",
-	"function.call": "#7aa2f7",
-	"punctuation.bracket": "#89ddff",
-	"punctuation.delimiter": "#89ddff",
-	tag: "#bb9af7",
-	attribute: "#bb9af7",
-	namespace: "#2ac3de",
-};
-
 export function EditorBuffer({
 	bufferState,
 	cursorLine,
@@ -58,10 +35,35 @@ export function EditorBuffer({
 	gutterWidth,
 	highlights = [],
 }: PaneProps) {
+	const colors = getColors();
 	const editorWidth = width - gutterWidth - 1;
 	const editorHeight = height;
 
 	const lines = useMemo(() => {
+		const captureColors: Record<string, string> = {
+			keyword: colors.keyword,
+			string: colors.string,
+			comment: colors.comment,
+			function: colors.function,
+			variable: colors.variable,
+			type: colors.type,
+			constant: colors.constant,
+			number: colors.constant,
+			operator: colors.keyword,
+			property: colors.variable,
+			parameter: colors.variable,
+			label: colors.keyword,
+			"variable.builtin": colors.variable,
+			"variable.parameter": colors.variable,
+			"function.builtin": colors.function,
+			"function.call": colors.function,
+			"punctuation.bracket": colors.keyword,
+			"punctuation.delimiter": colors.keyword,
+			tag: colors.keyword,
+			attribute: colors.variable,
+			namespace: colors.type,
+		};
+
 		const result = [];
 
 		const getCursorStyle = (): "block" | "line" => {
@@ -72,11 +74,12 @@ export function EditorBuffer({
 		};
 
 		const getCursorBg = (): string => {
-			if (mode.type === "insert") return "#9ece6a";
-			if (mode.type === "visual") return "#bb9af7";
-			if (mode.type === "command" || mode.type === "search") return "#ff9e64";
-			if (mode.type === "operator-pending") return "#e0af68";
-			return "#7aa2f7";
+			if (mode.type === "insert") return colors.success;
+			if (mode.type === "visual") return colors.selection;
+			if (mode.type === "command" || mode.type === "search")
+				return colors.warning;
+			if (mode.type === "operator-pending") return colors.warning;
+			return colors.cursor;
 		};
 
 		const isInVisualSelection = (lineNum: number, col: number): boolean => {
@@ -139,7 +142,7 @@ export function EditorBuffer({
 						isActive && lineNum === cursorLine && col === cursorColumn;
 					const isSelected = isInVisualSelection(lineNum, col);
 
-					let fg = "#ffffff";
+					let fg = colors.fg;
 					const h = lineHighlights.find((h) => {
 						if (h.start.line < lineNum && h.end.line > lineNum) return true;
 						if (h.start.line === lineNum && h.end.line === lineNum) {
@@ -157,16 +160,16 @@ export function EditorBuffer({
 					if (h) {
 						const baseCapture = h.capture.split(".")[0] || "";
 						fg =
-							CAPTURE_COLORS[h.capture] ||
-							CAPTURE_COLORS[baseCapture] ||
-							"#ffffff";
+							captureColors[h.capture] ||
+							captureColors[baseCapture] ||
+							colors.fg;
 					}
 
 					if (isCursor) {
 						const cursorStyle = getCursorStyle();
 						if (cursorStyle === "block") {
 							segments.push(
-								<span key={col} bg={getCursorBg()} fg="#1a1b26">
+								<span key={col} bg={getCursorBg()} fg={colors.bg}>
 									{char}
 								</span>,
 							);
@@ -177,8 +180,8 @@ export function EditorBuffer({
 										|
 									</span>
 									<span
-										bg={isSelected ? "#33467c" : undefined}
-										fg={isSelected ? "#c0caf5" : fg}
+										bg={isSelected ? colors.selection : undefined}
+										fg={isSelected ? colors.fg : fg}
 									>
 										{char}
 									</span>
@@ -189,8 +192,8 @@ export function EditorBuffer({
 						segments.push(
 							<span
 								key={col}
-								bg={isSelected ? "#33467c" : undefined}
-								fg={isSelected ? "#c0caf5" : fg}
+								bg={isSelected ? colors.selection : undefined}
+								fg={isSelected ? colors.fg : fg}
 							>
 								{char}
 							</span>,
@@ -200,7 +203,7 @@ export function EditorBuffer({
 				result.push(<text key={lineNum}>{segments}</text>);
 			} else {
 				result.push(
-					<text key={lineNum} fg="#3b4261">
+					<text key={lineNum} fg={colors.muted}>
 						{"~".padEnd(editorWidth, " ")}
 					</text>,
 				);
@@ -208,6 +211,7 @@ export function EditorBuffer({
 		}
 		return result;
 	}, [
+		colors, // Added dependency
 		bufferState,
 		scrollTop,
 		editorHeight,
@@ -227,14 +231,14 @@ export function EditorBuffer({
 			style={{
 				width,
 				height,
-				backgroundColor: isActive ? "#1a1b26" : "#16161e",
+				backgroundColor: isActive ? colors.bg : colors.surface, // Used surface for inactive
 			}}
 		>
 			<box
 				flexDirection="column"
 				style={{
 					width: Options.opt.number ? gutterWidth : 0,
-					backgroundColor: "#1a1b26",
+					backgroundColor: colors.bg,
 				}}
 			>
 				{Options.opt.number &&
@@ -254,8 +258,8 @@ export function EditorBuffer({
 						return (
 							<text
 								key={`gutter-${lineNum}`}
-								fg={isCurrentLine ? "#c0caf5" : "#3b4261"}
-								bg={isCurrentLine ? "#292e42" : "#1a1b26"}
+								fg={isCurrentLine ? colors.activeLineNumber : colors.lineNumber}
+								bg={isCurrentLine ? colors.surface : colors.bg}
 							>
 								{displayNum}{" "}
 							</text>

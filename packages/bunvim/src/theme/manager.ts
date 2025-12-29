@@ -1,6 +1,6 @@
-import { catppuccin, type Theme } from "./builtin";
+import { catppuccinMacchiato, type Theme } from "./builtin";
 
-let currentTheme: Theme = catppuccin;
+let currentTheme: Theme = catppuccinMacchiato;
 
 export function getTheme(): Theme {
 	return currentTheme;
