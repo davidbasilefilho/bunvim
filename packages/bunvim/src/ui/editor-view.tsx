@@ -1844,7 +1844,7 @@ export function EditorView() {
 				!/^\d+$/.test(state.pendingKeys) && (
 					<Clue
 						pendingKeys={state.pendingKeys}
-						mappings={vim.keymap.get_keymaps() as unknown[]}
+						mappings={vim.api.keymap.get_keymaps()}
 						onSelect={() => {}}
 						scrollTop={state.clueScrollTop}
 					/>
