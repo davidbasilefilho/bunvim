@@ -1,0 +1,32 @@
+name: CI
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  check:
+    name: Check & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Installs Bun, Zig, Biome via Mise
+      - name: Install Tools
+        uses: jdx/mise-action@v2
+
+      - name: Install Dependencies
+        run: bun install
+
+      # Runs Biome check (lint + format)
+      - name: Lint & Format
+        run: bun run check
+
+      # Runs TypeScript type checking
+      - name: Type Check
+        run: bun run check-types
+
+      # Runs Tests
+      - name: Test
+        run: bun run test
