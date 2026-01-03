@@ -40,6 +40,8 @@ export interface WindowProps {
 	focusable?: boolean;
 	closable?: boolean;
 	dim?: boolean;
+	hideTabline?: boolean;
+	singleBuffer?: boolean;
 	children?: React.ReactNode;
 }
 
@@ -127,8 +129,8 @@ function WindowHeader({
 		<box flexDirection="row" style={{ height: 1, backgroundColor: "#16161e" }}>
 			{gutterPadding}
 			{buffers.map((buf) => (
+				// biome-ignore lint/a11y/noStaticElementInteractions: TUI
 				<box
-					role="button"
 					key={buf.id}
 					onMouseDown={(e: { button: number }) => {
 						if (e.button === 0) onTabClick?.(buf.id);
@@ -227,6 +229,8 @@ export function Window({
 	maxHeight,
 	zIndex = 0,
 	dim = false,
+	hideTabline = false,
+	singleBuffer: _singleBuffer = false,
 	children,
 }: WindowProps) {
 	const { width: termWidth, height: termHeight } = useTerminalDimensions();
@@ -285,7 +289,7 @@ export function Window({
 
 	return (
 		<box flexDirection="column" style={containerStyle}>
-			{title && (
+			{title && !hideTabline && (
 				<box
 					flexDirection="row"
 					style={{ height: 1, backgroundColor: "#1f2335" }}
@@ -326,6 +330,8 @@ export function BufferWindow({
 	maxHeight,
 	zIndex = 0,
 	dim = false,
+	hideTabline = false,
+	singleBuffer = false,
 	buffers,
 	activeBufferId,
 	gutterWidth = 0,
@@ -387,23 +393,30 @@ export function BufferWindow({
 		return base;
 	}, [type, dimensions, position, zIndex, dim]);
 
-	const hasHeader = buffers.length > 0 || title !== undefined;
+	const hasHeader = (buffers.length > 0 || title !== undefined) && !hideTabline;
 	const contentHeight = hasHeader ? dimensions.height - 1 : dimensions.height;
 
 	return (
 		<box flexDirection="column" style={containerStyle}>
-			<WindowHeader
-				buffers={buffers}
-				activeBufferId={activeBufferId}
-				title={title}
-				gutterWidth={gutterWidth}
-				onTabClick={onTabClick}
-				onTabClose={onTabClose}
-			/>
+			{hasHeader && (
+				<WindowHeader
+					buffers={
+						singleBuffer
+							? buffers.filter((b) => b.id === activeBufferId)
+							: buffers
+					}
+					activeBufferId={activeBufferId}
+					title={title}
+					gutterWidth={gutterWidth}
+					onTabClick={onTabClick}
+					onTabClose={onTabClose}
+				/>
+			)}
 			<box flexDirection="column" style={{ height: contentHeight }}>
 				{editorProps && (
 					<EditorBuffer
-						{...editorProps}
+						// biome-ignore lint/suspicious/noExplicitAny: Generic component props
+						{...(editorProps as any)}
 						width={dimensions.width}
 						height={contentHeight}
 					/>

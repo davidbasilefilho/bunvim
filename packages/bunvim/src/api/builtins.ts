@@ -4,10 +4,11 @@ import * as Undo from "../core/undo";
 import type * as KeybindingsKeymap from "../keybindings/keymap";
 import * as LocalMarks from "../marks/local";
 import { bufferSource, filesSource, grepSource } from "../picker/builtins";
+import type { EditorUiState } from "../ui/state";
 import { vim } from "./vim";
 
 export function registerBuiltins(
-	setState: (updater: (s: unknown) => unknown) => void,
+	setState: (updater: (s: EditorUiState) => EditorUiState) => void,
 	editorHeight: number,
 	adjustScroll: (line: number, scrollTop: number) => number,
 	_clampCursor: (
@@ -17,8 +18,13 @@ export function registerBuiltins(
 		mode: KeybindingsKeymap.EditorMode,
 	) => { line: number; column: number },
 	executeMotion: (motionName: string, count: number) => void,
-	deleteVisualSelection: (s: unknown) => unknown,
-	getVisualSelectionText: (s: unknown) => string,
+	deleteVisualSelection: (s: EditorUiState) => {
+		text: string;
+		newBuffers: Buffer.BufferState[];
+		newCursorLine: number;
+		newCursorColumn: number;
+	},
+	getVisualSelectionText: (s: EditorUiState) => string,
 	applyOperator: (motionName: string, count: number) => void,
 	undo: () => void,
 	redo: () => void,
@@ -28,6 +34,7 @@ export function registerBuiltins(
 	jumpToPosition: (bufferId: number, line: number, column: number) => void,
 	showHover: () => void,
 	goToDefinition: () => void,
+	moveBuffer: (direction: "h" | "j" | "k" | "l") => void,
 ) {
 	const motions = [
 		"h",
@@ -60,21 +67,21 @@ export function registerBuiltins(
 	vim.keymap.set("o", "ac", () => applyTreesitterObject("ac"));
 
 	vim.keymap.set("n", "d", () =>
-		setState((s: unknown) => ({
+		setState((s: EditorUiState) => ({
 			...s,
-			mode: { type: "operator-pending", operator: "d" },
+			mode: { type: "operator-pending", operator: "d", count: undefined },
 		})),
 	);
 	vim.keymap.set("n", "y", () =>
-		setState((s: unknown) => ({
+		setState((s: EditorUiState) => ({
 			...s,
-			mode: { type: "operator-pending", operator: "y" },
+			mode: { type: "operator-pending", operator: "y", count: undefined },
 		})),
 	);
 	vim.keymap.set("n", "c", () =>
-		setState((s: unknown) => ({
+		setState((s: EditorUiState) => ({
 			...s,
-			mode: { type: "operator-pending", operator: "c" },
+			mode: { type: "operator-pending", operator: "c", count: undefined },
 		})),
 	);
 
@@ -112,7 +119,7 @@ export function registerBuiltins(
 		"n",
 		"/",
 		() =>
-			setState((s: unknown) => ({
+			setState((s: EditorUiState) => ({
 				...s,
 				mode: { type: "search", direction: "forward", input: "" },
 			})),
@@ -122,7 +129,7 @@ export function registerBuiltins(
 		"n",
 		"?",
 		() =>
-			setState((s: unknown) => ({
+			setState((s: EditorUiState) => ({
 				...s,
 				mode: { type: "search", direction: "backward", input: "" },
 			})),
@@ -130,24 +137,24 @@ export function registerBuiltins(
 	);
 
 	vim.keymap.set("n", "i", () =>
-		setState((s: unknown) => ({
+		setState((s: EditorUiState) => ({
 			...s,
 			mode: { type: "insert" },
 			pendingKeys: "",
 		})),
 	);
 	vim.keymap.set("n", "a", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
-			const buf = s.buffers.find((b: unknown) => b.id === win.bufId);
+			const buf = s.buffers.find((b) => b.id === win.bufId);
 			if (!buf) return s;
 			const lineLen = Buffer.getLineLength(buf, win.cursorLine) ?? 0;
 			const newCol = Math.min(win.cursorColumn + 1, lineLen);
 			return {
 				...s,
 				mode: { type: "insert" },
-				windows: s.windows.map((w: unknown) =>
+				windows: s.windows.map((w) =>
 					w.id === win.id ? { ...w, cursorColumn: newCol } : w,
 				),
 				pendingKeys: "",
@@ -155,16 +162,16 @@ export function registerBuiltins(
 		}),
 	);
 	vim.keymap.set("n", "A", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
-			const buf = s.buffers.find((b: unknown) => b.id === win.bufId);
+			const buf = s.buffers.find((b) => b.id === win.bufId);
 			if (!buf) return s;
 			const lineLen = Buffer.getLineLength(buf, win.cursorLine) ?? 0;
 			return {
 				...s,
 				mode: { type: "insert" },
-				windows: s.windows.map((w: unknown) =>
+				windows: s.windows.map((w) =>
 					w.id === win.id ? { ...w, cursorColumn: lineLen } : w,
 				),
 				pendingKeys: "",
@@ -172,10 +179,10 @@ export function registerBuiltins(
 		}),
 	);
 	vim.keymap.set("n", "I", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
-			const buf = s.buffers.find((b: unknown) => b.id === win.bufId);
+			const buf = s.buffers.find((b) => b.id === win.bufId);
 			if (!buf) return s;
 			const line = Buffer.getLine(buf, win.cursorLine) ?? "";
 			const match = line.match(/^\s*/);
@@ -183,7 +190,7 @@ export function registerBuiltins(
 			return {
 				...s,
 				mode: { type: "insert" },
-				windows: s.windows.map((w: unknown) =>
+				windows: s.windows.map((w) =>
 					w.id === win.id ? { ...w, cursorColumn: firstNonBlank } : w,
 				),
 				pendingKeys: "",
@@ -191,10 +198,10 @@ export function registerBuiltins(
 		}),
 	);
 	vim.keymap.set("n", "o", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
-			const buf = s.buffers.find((b: unknown) => b.id === win.bufId);
+			const buf = s.buffers.find((b) => b.id === win.bufId);
 			if (!buf) return s;
 			const lineLen = Buffer.getLineLength(buf, win.cursorLine) ?? 0;
 			const pos = { line: win.cursorLine, column: lineLen };
@@ -203,11 +210,9 @@ export function registerBuiltins(
 			Undo.addEntry([{ type: "insert", pos, text: "\n" }]);
 			return {
 				...s,
-				buffers: s.buffers.map((b: unknown) =>
-					b.id === buf.id ? newBuffer : b,
-				),
+				buffers: s.buffers.map((b) => (b.id === buf.id ? newBuffer : b)),
 				mode: { type: "insert" },
-				windows: s.windows.map((w: unknown) =>
+				windows: s.windows.map((w) =>
 					w.id === win.id
 						? {
 								...w,
@@ -222,10 +227,10 @@ export function registerBuiltins(
 		}),
 	);
 	vim.keymap.set("n", "O", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
-			const buf = s.buffers.find((b: unknown) => b.id === win.bufId);
+			const buf = s.buffers.find((b) => b.id === win.bufId);
 			if (!buf) return s;
 			const pos = { line: win.cursorLine, column: 0 };
 			const newBuffer = Buffer.insertAt(buf, pos, "\n");
@@ -233,11 +238,9 @@ export function registerBuiltins(
 			Undo.addEntry([{ type: "insert", pos, text: "\n" }]);
 			return {
 				...s,
-				buffers: s.buffers.map((b: unknown) =>
-					b.id === buf.id ? newBuffer : b,
-				),
+				buffers: s.buffers.map((b) => (b.id === buf.id ? newBuffer : b)),
 				mode: { type: "insert" },
-				windows: s.windows.map((w: unknown) =>
+				windows: s.windows.map((w) =>
 					w.id === win.id
 						? {
 								...w,
@@ -252,8 +255,8 @@ export function registerBuiltins(
 	);
 
 	vim.keymap.set("n", "v", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
 			return {
 				...s,
@@ -264,8 +267,8 @@ export function registerBuiltins(
 		}),
 	);
 	vim.keymap.set("n", "V", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
 			return {
 				...s,
@@ -276,8 +279,8 @@ export function registerBuiltins(
 		}),
 	);
 	vim.keymap.set("n", "<C-v>", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
 			return {
 				...s,
@@ -289,7 +292,10 @@ export function registerBuiltins(
 	);
 
 	vim.keymap.set("n", ":", () =>
-		setState((s: unknown) => ({ ...s, mode: { type: "command", input: "" } })),
+		setState((s: EditorUiState) => ({
+			...s,
+			mode: { type: "command", input: "" },
+		})),
 	);
 
 	vim.keymap.set("n", "<C-h>", () => moveFocus("h"), {
@@ -390,8 +396,8 @@ export function registerBuiltins(
 			"n",
 			`m${char}`,
 			() =>
-				setState((s: unknown) => {
-					const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+				setState((s: EditorUiState) => {
+					const win = s.windows.find((w) => w.id === s.activeWindowId);
 					if (!win) return s;
 					LocalMarks.setMark(char, win.bufId, win.cursorLine, win.cursorColumn);
 					vim.notify.notify(`Mark '${char}' set`, "info");
@@ -404,8 +410,8 @@ export function registerBuiltins(
 			"n",
 			`'${char}`,
 			() => {
-				setState((s: unknown) => {
-					const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+				setState((s: EditorUiState) => {
+					const win = s.windows.find((w) => w.id === s.activeWindowId);
 					if (!win) return s;
 					const mark = LocalMarks.getMark(char, win.bufId);
 					if (!mark) {
@@ -416,10 +422,14 @@ export function registerBuiltins(
 						jumpToPosition(mark.bufferId, mark.line, 0);
 						return s;
 					}
-					Jumplist.addJump(win.bufId, win.cursorLine, win.cursorColumn);
+					Jumplist.addJump({
+						bufferId: win.bufId,
+						line: win.cursorLine,
+						column: win.cursorColumn,
+					});
 					return {
 						...s,
-						windows: s.windows.map((w: unknown) =>
+						windows: s.windows.map((w) =>
 							w.id === win.id
 								? {
 										...w,
@@ -439,8 +449,8 @@ export function registerBuiltins(
 			"n",
 			`\`${char}`,
 			() => {
-				setState((s: unknown) => {
-					const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+				setState((s: EditorUiState) => {
+					const win = s.windows.find((w) => w.id === s.activeWindowId);
 					if (!win) return s;
 					const mark = LocalMarks.getMark(char, win.bufId);
 					if (!mark) {
@@ -451,10 +461,14 @@ export function registerBuiltins(
 						jumpToPosition(mark.bufferId, mark.line, mark.column);
 						return s;
 					}
-					Jumplist.addJump(win.bufId, win.cursorLine, win.cursorColumn);
+					Jumplist.addJump({
+						bufferId: win.bufId,
+						line: win.cursorLine,
+						column: win.cursorColumn,
+					});
 					return {
 						...s,
-						windows: s.windows.map((w: unknown) =>
+						windows: s.windows.map((w) =>
 							w.id === win.id
 								? {
 										...w,
@@ -475,7 +489,7 @@ export function registerBuiltins(
 		"n",
 		"s",
 		() => {
-			setState((s: unknown) => ({
+			setState((s: EditorUiState) => ({
 				...s,
 				mode: { type: "command", input: "", prompt: "FLASH" },
 			}));
@@ -484,14 +498,14 @@ export function registerBuiltins(
 	);
 
 	vim.keymap.set("n", "zz", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
-			const buf = s.buffers.find((b: unknown) => b.id === win.bufId);
+			const buf = s.buffers.find((b) => b.id === win.bufId);
 			if (!buf) return s;
 			return {
 				...s,
-				windows: s.windows.map((w: unknown) =>
+				windows: s.windows.map((w) =>
 					w.id === win.id
 						? {
 								...w,
@@ -509,15 +523,15 @@ export function registerBuiltins(
 		}),
 	);
 	vim.keymap.set("n", "<C-u>", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
 			const halfPage = Math.floor(editorHeight / 2);
 			const newLine = Math.max(0, win.cursorLine - halfPage);
 			const newScroll = Math.max(0, newLine - Math.floor(editorHeight / 2));
 			return {
 				...s,
-				windows: s.windows.map((w: unknown) =>
+				windows: s.windows.map((w) =>
 					w.id === win.id
 						? { ...w, cursorLine: newLine, scrollTop: newScroll }
 						: w,
@@ -526,10 +540,10 @@ export function registerBuiltins(
 		}),
 	);
 	vim.keymap.set("n", "<C-d>", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
-			const buf = s.buffers.find((b: unknown) => b.id === win.bufId);
+			const buf = s.buffers.find((b) => b.id === win.bufId);
 			if (!buf) return s;
 			const halfPage = Math.floor(editorHeight / 2);
 			const maxLine = Buffer.lineCount(buf) - 1;
@@ -543,7 +557,7 @@ export function registerBuiltins(
 			);
 			return {
 				...s,
-				windows: s.windows.map((w: unknown) =>
+				windows: s.windows.map((w) =>
 					w.id === win.id
 						? { ...w, cursorLine: newLine, scrollTop: Math.max(0, newScroll) }
 						: w,
@@ -553,48 +567,48 @@ export function registerBuiltins(
 	);
 
 	vim.keymap.set("n", "gt", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
-			const bufIdx = s.buffers.findIndex((b: unknown) => b.id === win.bufId);
+			const bufIdx = s.buffers.findIndex((b) => b.id === win.bufId);
 			const nextBuf = s.buffers[(bufIdx + 1) % s.buffers.length];
 			if (!nextBuf) return s;
 			return {
 				...s,
-				windows: s.windows.map((w: unknown) =>
+				windows: s.windows.map((w) =>
 					w.id === win.id ? { ...w, bufId: nextBuf.id } : w,
 				),
 			};
 		}),
 	);
 	vim.keymap.set("n", "gT", () =>
-		setState((s: unknown) => {
-			const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+		setState((s: EditorUiState) => {
+			const win = s.windows.find((w) => w.id === s.activeWindowId);
 			if (!win) return s;
-			const bufIdx = s.buffers.findIndex((b: unknown) => b.id === win.bufId);
+			const bufIdx = s.buffers.findIndex((b) => b.id === win.bufId);
 			const nextBuf =
 				s.buffers[(bufIdx - 1 + s.buffers.length) % s.buffers.length];
 			if (!nextBuf) return s;
 			return {
 				...s,
-				windows: s.windows.map((w: unknown) =>
+				windows: s.windows.map((w) =>
 					w.id === win.id ? { ...w, bufId: nextBuf.id } : w,
 				),
 			};
 		}),
 	);
 
-	for (const vMode of ["v", "x", "b"]) {
+	for (const vMode of ["v", "x", "b"] as const) {
 		const deleteAction = () =>
-			setState((s: unknown) => {
-				const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+			setState((s: EditorUiState) => {
+				const win = s.windows.find((w) => w.id === s.activeWindowId);
 				if (!win) return s;
 				const { text, newBuffers, newCursorLine, newCursorColumn } =
 					deleteVisualSelection(s);
 				return {
 					...s,
 					buffers: newBuffers,
-					windows: s.windows.map((w: unknown) =>
+					windows: s.windows.map((w) =>
 						w.id === win.id
 							? {
 									...w,
@@ -613,7 +627,7 @@ export function registerBuiltins(
 		vim.keymap.set(vMode, "x", deleteAction);
 
 		vim.keymap.set(vMode, "y", () =>
-			setState((s: unknown) => {
+			setState((s: EditorUiState) => {
 				const text = getVisualSelectionText(s);
 				return {
 					...s,
@@ -624,15 +638,15 @@ export function registerBuiltins(
 		);
 
 		vim.keymap.set(vMode, "c", () =>
-			setState((s: unknown) => {
-				const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+			setState((s: EditorUiState) => {
+				const win = s.windows.find((w) => w.id === s.activeWindowId);
 				if (!win) return s;
 				const { text, newBuffers, newCursorLine, newCursorColumn } =
 					deleteVisualSelection(s);
 				return {
 					...s,
 					buffers: newBuffers,
-					windows: s.windows.map((w: unknown) =>
+					windows: s.windows.map((w) =>
 						w.id === win.id
 							? {
 									...w,
@@ -649,18 +663,18 @@ export function registerBuiltins(
 		);
 
 		vim.keymap.set(vMode, "escape", () =>
-			setState((s: unknown) => ({ ...s, mode: { type: "normal" } })),
+			setState((s: EditorUiState) => ({ ...s, mode: { type: "normal" } })),
 		);
 		vim.keymap.set(vMode, "<C-c>", () =>
-			setState((s: unknown) => ({ ...s, mode: { type: "normal" } })),
+			setState((s: EditorUiState) => ({ ...s, mode: { type: "normal" } })),
 		);
 
 		vim.keymap.set(vMode, "J", () =>
-			setState((s: unknown) => {
-				const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+			setState((s: EditorUiState) => {
+				const win = s.windows.find((w) => w.id === s.activeWindowId);
 				if (!win || s.mode.type !== "visual" || s.mode.subtype !== "line")
 					return s;
-				const buf = s.buffers.find((b: unknown) => b.id === win.bufId);
+				const buf = s.buffers.find((b) => b.id === win.bufId);
 				if (!buf) return s;
 				const startLine = Math.min(s.visualAnchorLine, win.cursorLine);
 				const endLine = Math.max(s.visualAnchorLine, win.cursorLine);
@@ -677,10 +691,8 @@ export function registerBuiltins(
 				const newBuf = Buffer.createState(lines.join(""), buf.props);
 				return {
 					...s,
-					buffers: s.buffers.map((b: unknown) =>
-						b.id === buf.id ? newBuf : b,
-					),
-					windows: s.windows.map((w: unknown) =>
+					buffers: s.buffers.map((b) => (b.id === buf.id ? newBuf : b)),
+					windows: s.windows.map((w) =>
 						w.id === win.id
 							? {
 									...w,
@@ -695,11 +707,11 @@ export function registerBuiltins(
 		);
 
 		vim.keymap.set(vMode, "K", () =>
-			setState((s: unknown) => {
-				const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
+			setState((s: EditorUiState) => {
+				const win = s.windows.find((w) => w.id === s.activeWindowId);
 				if (!win || s.mode.type !== "visual" || s.mode.subtype !== "line")
 					return s;
-				const buf = s.buffers.find((b: unknown) => b.id === win.bufId);
+				const buf = s.buffers.find((b) => b.id === win.bufId);
 				if (!buf) return s;
 				const startLine = Math.min(s.visualAnchorLine, win.cursorLine);
 				const endLine = Math.max(s.visualAnchorLine, win.cursorLine);
@@ -716,10 +728,8 @@ export function registerBuiltins(
 				const newBuf = Buffer.createState(lines.join(""), buf.props);
 				return {
 					...s,
-					buffers: s.buffers.map((b: unknown) =>
-						b.id === buf.id ? newBuf : b,
-					),
-					windows: s.windows.map((w: unknown) =>
+					buffers: s.buffers.map((b) => (b.id === buf.id ? newBuf : b)),
+					windows: s.windows.map((w) =>
 						w.id === win.id
 							? {
 									...w,
@@ -748,17 +758,17 @@ export function registerBuiltins(
 			desc: "Focus Right",
 		});
 
-		vim.keymap.set(vMode, "<C-H>", () => moveFocus("h"), {
-			desc: "Focus Left",
+		vim.keymap.set(vMode, "<C-H>", () => moveBuffer("h"), {
+			desc: "Move Buffer Left",
 		});
-		vim.keymap.set(vMode, "<C-J>", () => moveFocus("j"), {
-			desc: "Focus Down",
+		vim.keymap.set(vMode, "<C-J>", () => moveBuffer("j"), {
+			desc: "Move Buffer Down",
 		});
-		vim.keymap.set(vMode, "<C-K>", () => moveFocus("k"), {
-			desc: "Focus Up",
+		vim.keymap.set(vMode, "<C-K>", () => moveBuffer("k"), {
+			desc: "Move Buffer Up",
 		});
-		vim.keymap.set(vMode, "<C-L>", () => moveFocus("l"), {
-			desc: "Focus Right",
+		vim.keymap.set(vMode, "<C-L>", () => moveBuffer("l"), {
+			desc: "Move Buffer Right",
 		});
 	}
 
@@ -766,7 +776,7 @@ export function registerBuiltins(
 		"n",
 		"<leader>e",
 		() => {
-			setState((s: unknown) => ({
+			setState((s: EditorUiState) => ({
 				...s,
 				mode: { type: "command", input: "e ", prompt: "NEW FILE" },
 			}));
@@ -778,7 +788,7 @@ export function registerBuiltins(
 		"n",
 		"<leader>ff",
 		() => {
-			setState((s: unknown) => ({
+			setState((s: EditorUiState) => ({
 				...s,
 				activePicker: { source: filesSource },
 			}));
@@ -790,7 +800,7 @@ export function registerBuiltins(
 		"n",
 		"<leader>f/",
 		() => {
-			setState((s: unknown) => ({
+			setState((s: EditorUiState) => ({
 				...s,
 				activePicker: { source: grepSource() },
 			}));
@@ -802,9 +812,11 @@ export function registerBuiltins(
 		"n",
 		"<leader>/",
 		() => {
-			setState((s: unknown) => {
-				const win = s.windows.find((w: unknown) => w.id === s.activeWindowId);
-				const buf = s.buffers.find((b: unknown) => b.id === win.bufId);
+			setState((s: EditorUiState) => {
+				const win = s.windows.find((w) => w.id === s.activeWindowId);
+				if (!win) return s;
+				const buf = s.buffers.find((b) => b.id === win.bufId);
+				if (!buf) return s;
 				return {
 					...s,
 					activePicker: { source: grepSource(buf.props.name) },
@@ -836,7 +848,7 @@ export function registerBuiltins(
 		"n",
 		"<leader>b",
 		() => {
-			setState((s: unknown) => ({
+			setState((s: EditorUiState) => ({
 				...s,
 				activePicker: { source: bufferSource },
 			}));

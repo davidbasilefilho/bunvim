@@ -1,3 +1,4 @@
+import { useKeyboard } from "@opentui/react";
 import type React from "react";
 import { Window } from "../ui/window";
 
@@ -5,6 +6,7 @@ type DialogProps = {
 	title: string;
 	description: string;
 	children?: React.ReactNode;
+	onClose: () => void;
 };
 
 type DialogDescriptionProps = {
@@ -21,7 +23,13 @@ type DialogItemProps = {
 	onSelect: () => void;
 };
 
-export function Dialog({ title, description, children }: DialogProps) {
+export function Dialog({ title, description, children, onClose }: DialogProps) {
+	useKeyboard((key) => {
+		if (key.name === "escape") {
+			onClose();
+		}
+	});
+
 	return (
 		<Window
 			id={888}
@@ -60,8 +68,8 @@ export function DialogList({ children }: DialogListProps) {
 
 export function DialogItem({ label, selected, onSelect }: DialogItemProps) {
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: TUI
 		<box
-			role="button"
 			onMouseDown={onSelect}
 			style={{
 				paddingLeft: 1,

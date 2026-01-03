@@ -23,6 +23,21 @@ export function write(docId: number, path?: string) {
 		});
 
 		doc.dirty = false;
+		if (path) {
+			doc.path = path;
+		}
+
+		const newBufferState: Buffer.BufferState = {
+			...doc.buffer,
+			modified: false,
+			props: {
+				...doc.buffer.props,
+				path: targetPath,
+				name: targetPath,
+			},
+		};
+		doc.buffer = newBufferState;
+		Buffer.updateBufferState(doc.buffer.id, () => newBufferState);
 	});
 }
 

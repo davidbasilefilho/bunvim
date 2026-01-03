@@ -135,7 +135,7 @@ interface VimApi {
 | Component | File | Description |
 |-----------|------|-------------|
 | Window | `core/window.ts` | Buffer container, singleton files, view state |
-| Panes | `ui/pane.tsx` | Splits, resize, focus, navigation (`Ctrl-w hjkl`) |
+| Panes | `ui/pane.tsx` | Splits, resize, focus, navigation (`Ctrl+hjkl` focus, `Ctrl+HJKL` move buffer) |
 | Popups | `ui/popup.tsx` | Anchor, size, border, dim, focus trap |
 | Tabline | `ui/tabline.tsx` | Visible when 2+ buffers. Buffer tabs, `gt/gT` |
 | Input Popup | `ui/input-popup.tsx` | Centered, label, icon, completion |

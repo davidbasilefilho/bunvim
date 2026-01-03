@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { Effect } from "effect";
 import * as dirs from "../api/dirs";
+import { vim } from "../api/vim";
 import { runCommand } from "../utils/shell";
 import { isTreeSitterAvailable, TreesitterError } from "./parser";
 import type { TreeSitterGrammar, TreeSitterModule } from "./types";
@@ -19,7 +20,13 @@ const initGrammars = (): boolean => {
 		try {
 			const mod = require(name) as TreeSitterModule;
 			register(mod);
-		} catch {}
+		} catch (e) {
+			vim.status.startTask(
+				`load-grammar-${name}`,
+				`Failed to load ${name}: ${e}`,
+			);
+			setTimeout(() => vim.status.finishTask(`load-grammar-${name}`), 5000);
+		}
 	};
 
 	tryLoad("tree-sitter-typescript", (mod) => {
@@ -87,7 +94,10 @@ const downloadGrammar = (lang: string) =>
 			);
 		}
 
+		const taskId = `ts-download-${lang}`;
 		downloading.add(lang);
+		vim.status.startTask(taskId, `Downloading tree-sitter-${lang}...`);
+
 		try {
 			const pkgJson = path.join(dirs.grammars, "package.json");
 			if (!existsSync(pkgJson)) {
@@ -103,8 +113,13 @@ const downloadGrammar = (lang: string) =>
 					cwd: dirs.grammars,
 				}),
 			);
+			vim.status.updateTask(taskId, `Installed tree-sitter-${lang}`, "success");
+		} catch (e) {
+			vim.status.updateTask(taskId, `Failed to download ${lang}`, "error");
+			throw e;
 		} finally {
 			downloading.delete(lang);
+			setTimeout(() => vim.status.finishTask(taskId), 3000);
 		}
 	});
 

@@ -1,5 +1,7 @@
 import { Effect } from "effect";
 import { isTreeSitterAvailable } from "./parser";
+import { queries } from "./queries";
+import type { TreeSitterLanguage, TreeSitterTree } from "./types";
 
 export type HighlightRange = {
 	start: { line: number; column: number };
@@ -8,9 +10,10 @@ export type HighlightRange = {
 };
 
 export const getHighlights = (
-	tree: unknown,
-	language: unknown,
-	queryStr: string,
+	tree: TreeSitterTree,
+	language: TreeSitterLanguage,
+	languageName: string,
+	queryStr?: string,
 ) =>
 	Effect.gen(function* (_) {
 		if (!isTreeSitterAvailable() || !tree || !language) {
@@ -20,15 +23,20 @@ export const getHighlights = (
 		return yield* _(
 			Effect.try({
 				try: () => {
+					const finalQueryStr = queryStr || queries[languageName];
+					if (!finalQueryStr) {
+						return [] as HighlightRange[];
+					}
+
 					if (!language.query) {
 						return [] as HighlightRange[];
 					}
-					const query = language.query(queryStr);
+					const query = language.query(finalQueryStr);
 					if (!query || !query.captures) {
 						return [] as HighlightRange[];
 					}
 					const captures = query.captures(tree.rootNode);
-					return captures.map((c: unknown) => ({
+					return captures.map((c) => ({
 						start: {
 							line: c.node.startPosition.row,
 							column: c.node.startPosition.column,
@@ -40,7 +48,9 @@ export const getHighlights = (
 						capture: c.name,
 					})) as HighlightRange[];
 				},
-				catch: () => [] as HighlightRange[],
+				catch: (_e) => {
+					return [] as HighlightRange[];
+				},
 			}),
 		);
 	});

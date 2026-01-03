@@ -1,44 +1,47 @@
-# Bunvim Monorepo
+# Bunvim
 
-This is a Bun-native monorepo using Turborepo and Biome.
+A Neovim-like terminal editor built with TypeScript, Bun, and OpenTUI.
 
-## Tooling Stack
+![Bunvim](https://github.com/user-attachments/assets/placeholder.png)
 
-- **Package Manager**: [Bun](https://bun.sh)
-- **Task Runner**: [Turborepo](https://turbo.build)
-- **Linting & Formatting**: [Biome](https://biomejs.dev)
-- **Type Checking**: [TypeScript](https://www.typescriptlang.org)
-- **Build**: [Bun Build](https://bun.sh/docs/bundler) (Compiles to single-file binaries)
+## Features
 
-## Getting Started
+- **Modal Editing**: Vim-compatible modes (Normal, Insert, Visual, Command).
+- **Fast**: Built on Bun for high performance.
+- **Modern**: React-based UI with OpenTUI.
+- **Extensible**: Plugin system using TypeScript.
+- **Built-in**: Fuzzy finder, LSP support, Treesitter highlighting (experimental).
 
-Run the following command to install dependencies:
+## Installation
 
-```sh
+### Binary
+
+Download the latest release from the [Releases](https://github.com/yourusername/bunvim/releases) page.
+
+### From Source
+
+```bash
+git clone https://github.com/yourusername/bunvim.git
+cd bunvim
+mise install # or manually install bun
 bun install
+bun run build
+./bin/bvim
 ```
 
-## Development
+## Usage
 
-To develop the project:
-
-```sh
-bun dev
+```bash
+bvim [file] [directory]
 ```
 
-## Tasks
+- `bvim .`: Open with current directory as root.
+- `bvim file.ts`: Open a specific file.
 
-You can run tasks for all packages from the root:
+## Configuration
 
-```sh
-bun run build          # Build all packages
-bun run lint           # Lint all packages
-bun run format         # Format all packages
-bun run check          # Lint and format check
-bun run check-types    # Type check all packages
-bun run test           # Run tests
-```
+Configuration is located at `~/.config/bvim/init.ts` (or directory structure).
 
-## Project Structure
+## License
 
-- `packages/bunvim`: Core Bunvim editor package.
+MIT

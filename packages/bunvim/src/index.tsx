@@ -6,6 +6,26 @@ import { vim } from "./api/vim";
 import { loadConfig } from "./config/loader";
 import { EditorView } from "./ui/editor-view";
 
+const args = process.argv.slice(2);
+let initialFile: string | undefined;
+
+if (args.length > 0) {
+	const arg = args[0];
+	if (arg) {
+		try {
+			const stat = fs.statSync(arg);
+			if (stat.isDirectory()) {
+				process.chdir(arg);
+			} else if (stat.isFile()) {
+				initialFile = arg;
+			}
+		} catch {
+			// Assume it's a new file if it doesn't exist
+			initialFile = arg;
+		}
+	}
+}
+
 await Effect.runPromise(
 	Effect.gen(function* (_) {
 		yield* _(vim.dirs.ensureDirs);
@@ -53,4 +73,4 @@ process.on("uncaughtException", () => {
 
 export { cleanupTerminal };
 
-createRoot(renderer).render(<EditorView />);
+createRoot(renderer).render(<EditorView initialFile={initialFile} />);

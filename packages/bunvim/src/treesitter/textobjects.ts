@@ -1,12 +1,13 @@
 import type { Position, Range } from "../utils/position";
 import { isTreeSitterAvailable } from "./parser";
+import type { TreeSitterNode, TreeSitterTree } from "./types";
 
 export type TextObjectResult = {
 	readonly range: Range;
 };
 
 export function getFunctionObject(
-	tree: unknown,
+	tree: TreeSitterTree,
 	pos: Position,
 	type: "inner" | "around",
 ): TextObjectResult | undefined {
@@ -17,7 +18,7 @@ export function getFunctionObject(
 		column: pos.column,
 	});
 
-	let current = node;
+	let current: TreeSitterNode | null = node;
 	while (current) {
 		if (
 			current.type.includes("function") ||
@@ -41,8 +42,7 @@ export function getFunctionObject(
 			}
 
 			const body = current.namedChildren.find(
-				(c: unknown) =>
-					c.type.includes("statement_block") || c.type.includes("block"),
+				(c) => c.type.includes("statement_block") || c.type.includes("block"),
 			);
 			if (body) {
 				return {
@@ -78,7 +78,7 @@ export function getFunctionObject(
 }
 
 export function getClassObject(
-	tree: unknown,
+	tree: TreeSitterTree,
 	pos: Position,
 	type: "inner" | "around",
 ): TextObjectResult | undefined {
@@ -89,7 +89,7 @@ export function getClassObject(
 		column: pos.column,
 	});
 
-	let current = node;
+	let current: TreeSitterNode | null = node;
 	while (current) {
 		if (
 			current.type === "class_declaration" ||
@@ -113,7 +113,7 @@ export function getClassObject(
 			}
 
 			const body = current.namedChildren.find(
-				(c: unknown) =>
+				(c) =>
 					c.type === "class_body" ||
 					c.type === "interface_body" ||
 					c.type.includes("block"),

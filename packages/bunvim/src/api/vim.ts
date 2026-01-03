@@ -8,6 +8,7 @@ import * as notify from "./notify";
 import * as options from "./options";
 import * as plugin from "./plugin";
 import { registry } from "./registry";
+import * as status from "./status";
 import * as store from "./store";
 import * as window from "./window";
 
@@ -25,6 +26,7 @@ export const vim = {
 		notify,
 		command,
 		registry,
+		status,
 	},
 	keymap,
 	autocmd,
@@ -36,6 +38,7 @@ export const vim = {
 	command,
 	dirs,
 	store,
+	status,
 	g: {} as Record<string, unknown>,
 };
 

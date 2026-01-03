@@ -1,7 +1,7 @@
 import { Effect } from "effect";
-import type { Tree } from "tree-sitter";
 import { detectLanguage, getGrammar } from "../treesitter/grammars";
-import { parse } from "../treesitter/parser";
+import { applyEdits, parse } from "../treesitter/parser";
+import type { TreeSitterLanguage, TreeSitterTree } from "../treesitter/types";
 import * as Buffer from "./buffer";
 
 export type Document = {
@@ -10,7 +10,7 @@ export type Document = {
 	path?: string;
 	language: string;
 	dirty: boolean;
-	tree?: Tree | unknown;
+	tree?: TreeSitterTree;
 };
 
 let nextDocId = 1;
@@ -29,13 +29,23 @@ export function create(content: string, path?: string): Document {
 	return doc;
 }
 
-export const updateTree = (doc: Document) =>
+export const updateTree = (doc: Document, changes?: Buffer.BufferChange[]) =>
 	Effect.gen(function* (_) {
 		if (doc.language === "text") return;
 		const grammar = yield* _(getGrammar(doc.language));
 		const content = Buffer.getText(doc.buffer);
-		const tree = yield* _(parse(content, grammar));
-		(doc as { tree?: unknown }).tree = tree;
+
+		let oldTree = doc.tree;
+		if (oldTree && changes && changes.length > 0) {
+			applyEdits(oldTree, changes, doc.buffer);
+		} else if (changes && changes.length > 0) {
+			oldTree = undefined;
+		}
+
+		const tree = yield* _(
+			parse(content, grammar as TreeSitterLanguage, oldTree),
+		);
+		doc.tree = tree;
 	});
 
 export function get(id: number): Document | undefined {

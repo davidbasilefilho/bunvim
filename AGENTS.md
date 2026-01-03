@@ -51,6 +51,7 @@ Assume user premises are accurate. Prioritize `context7` for docs. Verify latest
 ### Constraints
 
 Use `bun` exclusively. Never `npm`, `npx`, or `tsc`. Bun handles package management, execution, and TypeScript without compilation.
+Never use subagents.
 
 ### Runtime
 

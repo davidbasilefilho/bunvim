@@ -8,6 +8,7 @@ import { detectLanguage, getGrammar } from "../treesitter/grammars";
 import type { HighlightRange } from "../treesitter/highlights";
 import { getHighlights } from "../treesitter/highlights";
 import { parse } from "../treesitter/parser";
+import type { TreeSitterLanguage, TreeSitterTree } from "../treesitter/types";
 import { KeymapIndicator } from "./keymap-indicator";
 import { Window } from "./window";
 
@@ -57,7 +58,8 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 
 	useEffect(() => {
 		const selectedItem = filteredItems[selectedIndex];
-		const filePath = selectedItem?.data?.file;
+		const data = selectedItem?.data as { file?: string } | undefined;
+		const filePath = data?.file;
 
 		if (!filePath) {
 			setPreviewContent([]);
@@ -76,8 +78,16 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 				if (language !== "text") {
 					const effect = Effect.gen(function* (_) {
 						const grammar = yield* _(getGrammar(language));
-						const tree = yield* _(parse(content, grammar));
-						const highlights = yield* _(getHighlights(tree, grammar, ""));
+						const tree = yield* _(
+							parse(content, grammar as TreeSitterLanguage),
+						);
+						const highlights = yield* _(
+							getHighlights(
+								tree as TreeSitterTree,
+								grammar as TreeSitterLanguage,
+								language,
+							),
+						);
 						return highlights;
 					});
 
@@ -159,7 +169,8 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 	});
 
 	const selectedItem = filteredItems[selectedIndex];
-	const hasPreview = selectedItem?.data?.file !== undefined;
+	const data = selectedItem?.data as { file?: string } | undefined;
+	const hasPreview = data?.file !== undefined;
 
 	return (
 		<Window
@@ -170,18 +181,22 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 			height="80%"
 			title={source.name}
 			dim={true}
+			hideTabline={true}
+			singleBuffer={true}
 		>
 			<box
 				flexGrow={1}
 				flexDirection="column"
-				style={{ backgroundColor: colors.picker.bg }}
+				style={{
+					backgroundColor: colors.picker.bg,
+				}}
 			>
 				<box
 					height={3}
 					flexDirection="row"
 					alignItems="center"
 					backgroundColor={colors.surface}
-					paddingLeft={0}
+					paddingRight={1}
 				>
 					<box
 						style={{
@@ -198,17 +213,22 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 					/>
 				</box>
 				<box flexGrow={1} flexDirection="row">
-					<box flexGrow={1} flexBasis={0} flexDirection="column" padding={1}>
+					<box flexGrow={1} flexBasis={0} flexDirection="column">
 						{loading ? (
-							<text fg={colors.muted}>Loading...</text>
+							<box paddingLeft={1}>
+								<text fg={colors.muted}>Loading...</text>
+							</box>
 						) : filteredItems.length === 0 ? (
-							<text fg={colors.muted}>No results</text>
+							<box paddingLeft={1}>
+								<text fg={colors.muted}>No results</text>
+							</box>
 						) : (
 							filteredItems.slice(0, 30).map((item, i) => (
 								<box
 									key={i}
 									style={{
 										paddingLeft: 1,
+										paddingRight: 1,
 										backgroundColor: undefined,
 									}}
 								>
@@ -231,8 +251,8 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 							flexGrow={1}
 							flexBasis={0}
 							flexDirection="column"
-							backgroundColor={colors.bg}
-							paddingLeft={1}
+							backgroundColor={colors.overlay}
+							padding={1}
 						>
 							{previewLoading ? (
 								<text fg={colors.muted}>Loading preview...</text>

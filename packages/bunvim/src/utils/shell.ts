@@ -1,3 +1,4 @@
+import { $ } from "bun";
 import { Effect } from "effect";
 
 export class ShellError extends Error {
@@ -7,8 +8,11 @@ export class ShellError extends Error {
 export function runCommand(command: string[], options?: { cwd?: string }) {
 	return Effect.tryPromise({
 		try: async () => {
-			const proc = Bun.spawn(command, { cwd: options?.cwd });
-			const output = await new Response(proc.stdout).text();
+			const [cmd, ...args] = command;
+			if (!cmd) return "";
+			const output = await $`${cmd} ${args}`
+				.cwd(options?.cwd ?? process.cwd())
+				.text();
 			return output;
 		},
 		catch: (e) => new ShellError(String(e)),

@@ -10,61 +10,23 @@ import * as Jumplist from "../core/jumplist";
 import * as Undo from "../core/undo";
 import * as Keymap from "../keybindings/keymap";
 import * as Motions from "../keybindings/motions";
+
 import { bufferSource, filesSource, grepSource } from "../picker/builtins";
-import type { PickerSource } from "../picker/source";
 import { detectLanguage, getGrammar } from "../treesitter/grammars";
 import type { HighlightRange } from "../treesitter/highlights";
 import { getHighlights } from "../treesitter/highlights";
 import { parse } from "../treesitter/parser";
 import { getClassObject, getFunctionObject } from "../treesitter/textobjects";
+import type { TreeSitterLanguage, TreeSitterTree } from "../treesitter/types";
 import { Clue } from "./clue";
 import { HomeBuffer } from "./home-buffer";
 import { InputPopup } from "./input-popup";
 import { Notifications } from "./notifications";
 import { Picker } from "./picker";
+import type { EditorUiState, WindowState } from "./state";
+import { Statistics } from "./statistics";
 import { Statusline } from "./statusline";
 import { type BufferEntry, BufferWindow } from "./window";
-
-type WindowState = {
-	id: number;
-	bufId: number;
-	bufferIds: number[];
-	split?: "h" | "v";
-	cursorLine: number;
-	cursorColumn: number;
-	scrollTop: number;
-};
-
-type EditorUiState = {
-	buffers: Buffer.BufferState[];
-	windows: WindowState[];
-	activeWindowId: number;
-	mode: Keymap.EditorMode;
-	pendingKeys: string;
-	clueScrollTop: number;
-	visualAnchorLine: number;
-	visualAnchorColumn: number;
-	yankRegister: string;
-	activePicker?: {
-		source: PickerSource;
-	};
-	highlights: Record<number, HighlightRange[]>;
-	isHomeBuffer: boolean;
-	lastSearch?: {
-		pattern: string;
-		direction: "forward" | "backward";
-	};
-	quitDialog?: {
-		bufId: number;
-		onConfirm: () => void;
-		onCancel: () => void;
-	};
-	hoverPopup?: {
-		contents: string;
-		line: number;
-		column: number;
-	};
-};
 
 const INITIAL_CONTENT =
 	"Welcome to Bunvim!\n\nPress : to enter commands.\nUse <leader>ff to find files.\nUse <leader>f/ to grep project.";
@@ -83,13 +45,14 @@ const DEFAULT_BUFFER: Buffer.BufferState = Buffer.createState("", {
 	name: "[Default]",
 });
 
-export function EditorView() {
+export function EditorView({ initialFile }: { initialFile?: string }) {
 	const { width: _width, height } = useTerminalDimensions();
 	const [state, setState] = useState<EditorUiState>(() => {
 		const initialBuffer = Buffer.createState(INITIAL_CONTENT, {
 			type: "scratch",
 			name: "[Home]",
 		});
+
 		return {
 			buffers: [initialBuffer],
 			windows: [
@@ -137,8 +100,14 @@ export function EditorView() {
 			const effect = Effect.gen(function* (_) {
 				const grammar = yield* _(getGrammar(language));
 				const content = Buffer.getText(activeBuffer);
-				const tree = yield* _(parse(content, grammar));
-				const highlights = yield* _(getHighlights(tree, grammar, ""));
+				const tree = yield* _(parse(content, grammar as TreeSitterLanguage));
+				const highlights = yield* _(
+					getHighlights(
+						tree as TreeSitterTree,
+						grammar as TreeSitterLanguage,
+						language,
+					),
+				);
 				return highlights;
 			});
 
@@ -148,10 +117,12 @@ export function EditorView() {
 					...s,
 					highlights: {
 						...s.highlights,
-						[activeBuffer.id]: highlights as Record<number, unknown[]>,
+						[activeBuffer.id]: highlights as HighlightRange[],
 					},
 				}));
-			} catch (_e) {}
+			} catch (e) {
+				vim.notify.notify(`Highlight error: ${e}`, "error");
+			}
 		};
 		updateHighlights();
 	}, [activeBuffer]);
@@ -443,7 +414,8 @@ export function EditorView() {
 				if (existingBuffer) {
 					buf = existingBuffer;
 				} else {
-					const content = await Bun.file(filePath).text();
+					const rawContent = await Bun.file(filePath).text();
+					const content = rawContent.replace(/\r\n/g, "\n");
 					buf = Buffer.createState(content, {
 						type: "file",
 						path: filePath,
@@ -529,6 +501,12 @@ export function EditorView() {
 		],
 	);
 
+	useEffect(() => {
+		if (initialFile) {
+			openFile(initialFile);
+		}
+	}, [initialFile, openFile]);
+
 	const closeActiveBuffer = useCallback((windowId: number, force = false) => {
 		setState((s) => {
 			const win = s.windows.find((w) => w.id === windowId);
@@ -555,7 +533,9 @@ export function EditorView() {
 					process.exit(0);
 				}
 				const nextActiveId =
-					windowId === s.activeWindowId ? newWindows[0]?.id : s.activeWindowId;
+					windowId === s.activeWindowId
+						? (newWindows[0]?.id ?? 0)
+						: s.activeWindowId;
 				return {
 					...s,
 					windows: newWindows,
@@ -1365,6 +1345,55 @@ export function EditorView() {
 		});
 	}, []);
 
+	const moveBuffer = useCallback((direction: "h" | "j" | "k" | "l") => {
+		setState((s) => {
+			const activeIdx = s.windows.findIndex((w) => w.id === s.activeWindowId);
+			if (activeIdx === -1) return s;
+
+			let nextIdx = activeIdx;
+			if (direction === "h" || direction === "k") {
+				nextIdx = (activeIdx - 1 + s.windows.length) % s.windows.length;
+			} else {
+				nextIdx = (activeIdx + 1) % s.windows.length;
+			}
+
+			if (nextIdx === activeIdx) return s;
+
+			const activeWin = s.windows[activeIdx];
+			const nextWin = s.windows[nextIdx];
+			if (!activeWin || !nextWin) return s;
+
+			const activeBufId = activeWin.bufId;
+			const nextBufId = nextWin.bufId;
+
+			return {
+				...s,
+				windows: s.windows.map((w) => {
+					if (w.id === activeWin.id) {
+						return {
+							...w,
+							bufId: nextBufId,
+							bufferIds: w.bufferIds.includes(nextBufId)
+								? w.bufferIds
+								: [...w.bufferIds, nextBufId],
+						};
+					}
+					if (w.id === nextWin.id) {
+						return {
+							...w,
+							bufId: activeBufId,
+							bufferIds: w.bufferIds.includes(activeBufId)
+								? w.bufferIds
+								: [...w.bufferIds, activeBufId],
+						};
+					}
+					return w;
+				}),
+				activeWindowId: nextWin.id,
+			};
+		});
+	}, []);
+
 	const jumpToPosition = useCallback(
 		(bufferId: number, line: number, column: number) => {
 			setState((s) => {
@@ -1466,6 +1495,7 @@ export function EditorView() {
 				() => {
 					vim.notify.notify("Go to definition (LSP not connected)", "warn");
 				},
+				moveBuffer,
 			);
 			isRegisteredRef.current = true;
 		}
@@ -1483,6 +1513,7 @@ export function EditorView() {
 		applyTreesitterObject,
 		moveFocus,
 		jumpToPosition,
+		moveBuffer,
 	]);
 
 	useKeyboard((key) => {
@@ -1564,14 +1595,10 @@ export function EditorView() {
 	});
 
 	const onMouseScroll = useCallback(
-		(event: {
-			key?: string;
-			ctrl?: boolean;
-			shift?: boolean;
-			meta?: boolean;
-			alt?: boolean;
-		}) => {
+		// biome-ignore lint/suspicious/noExplicitAny: Event type not exported from OpenTUI
+		(event: any) => {
 			const delta = (event.scroll?.delta ?? Options.opt.mouseScrollStep) * 5;
+
 			setState((s) => {
 				const win =
 					s.windows.find((w) => w.id === s.activeWindowId) ?? DEFAULT_WINDOW;
@@ -1735,7 +1762,8 @@ export function EditorView() {
 			{state.activePicker && (
 				<Picker
 					source={state.activePicker.source}
-					onSelect={(item: unknown, split?: "h" | "v") => {
+					// biome-ignore lint/suspicious/noExplicitAny: Picker item structure varies
+					onSelect={(item: any, split?: "h" | "v") => {
 						if (item.data?.bufId !== undefined) {
 							const bufId = item.data.bufId;
 							setState((s) => ({
@@ -1839,13 +1867,15 @@ export function EditorView() {
 				</box>
 			)}
 
+			<Statistics />
+
 			{state.pendingKeys.length > 0 &&
 				state.mode.type !== "command" &&
 				!/^\d+$/.test(state.pendingKeys) && (
 					<Clue
 						pendingKeys={state.pendingKeys}
 						mappings={vim.api.keymap.get_keymaps()}
-						onSelect={() => {}}
+						onSelect={() => undefined}
 						scrollTop={state.clueScrollTop}
 					/>
 				)}

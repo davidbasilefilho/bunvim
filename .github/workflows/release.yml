@@ -1,0 +1,33 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tools
+        uses: jdx/mise-action@v2
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build All Targets
+        working-directory: packages/bunvim
+        run: bun run build:all
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            bin/bvim-linux-x64
+            bin/bvim-darwin-arm64
+            bin/bvim-windows-x64.exe
+          generate_release_notes: true
