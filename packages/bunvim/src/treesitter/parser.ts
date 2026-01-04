@@ -1,10 +1,17 @@
+import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
+import path from "node:path";
 import { Data, Effect } from "effect";
+import * as dirs from "../api/dirs";
 import type { BufferChange } from "../core/buffer";
 import * as Buffer from "../core/buffer";
+import { logSync } from "../utils/logger";
+import { runCommand } from "../utils/shell";
 import type {
 	TreeSitterEdit,
 	TreeSitterLanguage,
 	TreeSitterParser,
+	TreeSitterQuery,
 	TreeSitterTree,
 } from "./types";
 
@@ -13,41 +20,100 @@ export class TreesitterError extends Data.TaggedError("TreesitterError")<{
 	readonly cause?: unknown;
 }> {}
 
-let Parser: { new (): TreeSitterParser } | null = null;
-let parser: TreeSitterParser | null = null;
-let treeSitterAvailable: boolean | null = null;
+type ParserModule = {
+	new (): TreeSitterParser;
+	Query: new (language: unknown, source: string) => TreeSitterQuery;
+};
 
-const initTreeSitter = (): boolean => {
-	if (treeSitterAvailable !== null) return treeSitterAvailable;
+let ParserClass: ParserModule | null = null;
+let parser: TreeSitterParser | null = null;
+let initAttempted = false;
+
+const initParser = async (): Promise<boolean> => {
+	if (initAttempted) return !!ParserClass;
+	initAttempted = true;
 
 	try {
-		Parser = require("tree-sitter");
-		treeSitterAvailable = true;
-	} catch {
-		Parser = null;
-		treeSitterAvailable = false;
+		const mod = await import("tree-sitter");
+		ParserClass = mod.default as unknown as ParserModule;
+		logSync.debug("TreeSitter initialized from project dependencies");
+		return true;
+	} catch (e) {
+		logSync.debug("tree-sitter not available via direct import", e);
 	}
-	return treeSitterAvailable;
+
+	// Try to load from ~/.cache/bvim/grammars/node_modules/tree-sitter first
+	try {
+		const pkgPath = path.join(dirs.grammars, "node_modules", "tree-sitter");
+
+		if (!existsSync(pkgPath)) {
+			logSync.info("Downloading tree-sitter core...");
+
+			const pkgJson = path.join(dirs.grammars, "package.json");
+			if (!existsSync(pkgJson)) {
+				await Effect.runPromise(
+					runCommand("bun init -y", { cwd: dirs.grammars }),
+				);
+			}
+
+			await Effect.runPromise(
+				runCommand("bun add --trust tree-sitter", {
+					cwd: dirs.grammars,
+					env: { CXXFLAGS: "-fexceptions" },
+				}),
+			);
+			logSync.info("Downloaded tree-sitter core");
+		}
+
+		// Use createRequire to bypass VFS restrictions in bundled app
+		const grammarRequire = createRequire(
+			path.join(dirs.grammars, "package.json"),
+		);
+		const mod = grammarRequire(pkgPath);
+		ParserClass = (mod.default || mod) as unknown as ParserModule;
+		logSync.debug("TreeSitter initialized from dynamic path");
+		return true;
+	} catch (e) {
+		logSync.warn("Failed to load tree-sitter from dynamic path", e);
+		return false;
+	}
 };
 
 export const isTreeSitterAvailable = (): boolean => {
-	if (treeSitterAvailable !== null) return treeSitterAvailable;
-	return initTreeSitter();
+	return !!ParserClass;
+};
+
+export const ensureTreeSitter = async (): Promise<boolean> => {
+	return initParser();
 };
 
 export const getParser = (): TreeSitterParser | undefined => {
-	if (!isTreeSitterAvailable() || !Parser) {
+	if (!ParserClass) {
 		return undefined;
 	}
 	if (!parser) {
 		try {
-			parser = new Parser();
+			parser = new ParserClass();
 		} catch {
-			treeSitterAvailable = false;
 			return undefined;
 		}
 	}
 	return parser;
+};
+
+export const createQuery = (
+	language: TreeSitterLanguage,
+	source: string,
+): TreeSitterQuery | undefined => {
+	if (!ParserClass) {
+		return undefined;
+	}
+	try {
+		return new ParserClass.Query(language, source);
+	} catch (e) {
+		logSync.error("Failed to create tree-sitter query", e);
+		return undefined;
+	}
 };
 
 export const applyEdits = (
@@ -103,6 +169,7 @@ export const parse = (
 ) =>
 	Effect.gen(function* (_) {
 		if (!isTreeSitterAvailable()) {
+			logSync.error("TreeSitter not available during parse");
 			return yield* _(
 				Effect.fail(
 					new TreesitterError({ message: "tree-sitter not available" }),
@@ -112,6 +179,7 @@ export const parse = (
 
 		const p = getParser();
 		if (!p) {
+			logSync.error("Failed to get parser instance");
 			return yield* _(
 				Effect.fail(
 					new TreesitterError({ message: "Failed to create parser" }),
@@ -125,8 +193,13 @@ export const parse = (
 					p.setLanguage(language);
 					return p.parse(content, oldTree);
 				},
-				catch: (e) =>
-					new TreesitterError({ message: "Failed to parse content", cause: e }),
+				catch: (e) => {
+					logSync.error("Parser exception", e);
+					return new TreesitterError({
+						message: "Failed to parse content",
+						cause: e,
+					});
+				},
 			}),
 		);
 	});

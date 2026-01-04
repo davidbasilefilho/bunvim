@@ -53,6 +53,13 @@ Assume user premises are accurate. Prioritize `context7` for docs. Verify latest
 Use `bun` exclusively. Never `npm`, `npx`, or `tsc`. Bun handles package management, execution, and TypeScript without compilation.
 Never use subagents.
 
+**Type Safety Rules:**
+
+- Never use `as unknown`, `as never`, or any type assertion (`as X`) to suppress type errors
+- Create proper types instead of using unsafe casts
+- Never create duplicate or nearly identical types—reuse existing types or adapt them
+- If a type needs modification, extend or genericize it rather than duplicating
+
 ### Runtime
 
 `bun` runtime, `bunx --bun` for package execution, Bun Shell (`$`) for shell commands.

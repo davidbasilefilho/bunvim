@@ -18,16 +18,7 @@ export const filesSource: PickerSource = {
 	name: "Files",
 	getItems: (_query: string) =>
 		pipe(
-			runCommand([
-				"fd",
-				"--type",
-				"f",
-				"--hidden",
-				"--exclude",
-				".git",
-				"--exclude",
-				"node_modules",
-			]),
+			runCommand("fd --type f --hidden --exclude .git --exclude node_modules"),
 			Effect.map((output) =>
 				output
 					.split("\n")
@@ -46,12 +37,10 @@ export const grepSource = (file?: string): PickerSource => ({
 	getItems: (query: string) => {
 		if (query.length < 2) return Effect.succeed([]);
 
-		const args = ["rg", "--vimgrep", "--smart-case", query];
-		if (file) {
-			args.push(file);
-		}
+		const q = (s: string) => JSON.stringify(s);
+		const cmd = `rg --vimgrep --smart-case ${q(query)}${file ? ` ${q(file)}` : ""}`;
 		return pipe(
-			runCommand(args),
+			runCommand(cmd),
 			Effect.map((output) =>
 				output
 					.split("\n")

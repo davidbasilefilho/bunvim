@@ -4,11 +4,13 @@ export const queries: Record<string, string> = {
     (string) @string
     (number) @constant
     (comment) @comment
-    (function_declaration name: (identifier) @function)
+    (function_declaration (identifier) @function)
     (call_expression function: (identifier) @function)
-    (class_declaration name: (identifier) @type)
-    (interface_declaration name: (identifier) @type)
-    (type_alias_declaration name: (identifier) @type)
+    (class_declaration (type_identifier) @type)
+    (interface_declaration (type_identifier) @type)
+    (type_alias_declaration (type_identifier) @type)
+    (this) @variable.builtin
+    (super) @variable.builtin
     
     [
       "if"
@@ -40,8 +42,6 @@ export const queries: Record<string, string> = {
       "extends"
       "implements"
       "new"
-      "this"
-      "super"
       "typeof"
       "instanceof"
       "in"
@@ -56,9 +56,11 @@ export const queries: Record<string, string> = {
     (string) @string
     (number) @constant
     (comment) @comment
-    (function_declaration name: (identifier) @function)
+    (function_declaration (identifier) @function)
     (call_expression function: (identifier) @function)
-    (class_declaration name: (identifier) @type)
+    (class_declaration (identifier) @type)
+    (this) @variable.builtin
+    (super) @variable.builtin
 
     [
       "if"
@@ -86,13 +88,10 @@ export const queries: Record<string, string> = {
       "class"
       "extends"
       "new"
-      "this"
-      "super"
       "typeof"
       "instanceof"
       "in"
       "of"
-      "as"
       "async"
       "await"
     ] @keyword
@@ -102,14 +101,16 @@ export const queries: Record<string, string> = {
     (string) @string
     (number) @constant
     (comment) @comment
-    (function_declaration name: (identifier) @function)
+    (function_declaration (identifier) @function)
     (call_expression function: (identifier) @function)
-    (class_declaration name: (identifier) @type)
-    (interface_declaration name: (identifier) @type)
-    (type_alias_declaration name: (identifier) @type)
-    (jsx_opening_element name: (_) @type)
-    (jsx_closing_element name: (_) @type)
+    (class_declaration (type_identifier) @type)
+    (interface_declaration (type_identifier) @type)
+    (type_alias_declaration (type_identifier) @type)
+    (jsx_opening_element (identifier) @type)
+    (jsx_closing_element (identifier) @type)
     (jsx_attribute (property_identifier) @variable)
+    (this) @variable.builtin
+    (super) @variable.builtin
 
     [
       "if"
@@ -141,8 +142,6 @@ export const queries: Record<string, string> = {
       "extends"
       "implements"
       "new"
-      "this"
-      "super"
       "typeof"
       "instanceof"
       "in"

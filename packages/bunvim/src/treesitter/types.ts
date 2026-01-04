@@ -1,22 +1,3 @@
-export type TreeSitterGrammar = {
-	query: (source: string) => TreeSitterQuery;
-};
-
-export type TreeSitterQuery = {
-	captures: (node: TreeSitterNode) => Array<{
-		name: string;
-		node: TreeSitterNode;
-	}>;
-};
-
-export type TreeSitterModule = Record<string, unknown> & {
-	default?: TreeSitterGrammar;
-	typescript?: TreeSitterGrammar;
-	tsx?: TreeSitterGrammar;
-};
-
-export type TreeSitterLanguage = TreeSitterGrammar;
-
 export type Point = {
 	row: number;
 	column: number;
@@ -47,7 +28,23 @@ export type TreeSitterEdit = {
 	newEndPosition: Point;
 };
 
+export type TreeSitterQuery = {
+	captures: (
+		node: TreeSitterNode,
+	) => Array<{ name: string; node: TreeSitterNode }>;
+};
+
 export type TreeSitterParser = {
 	setLanguage: (language: TreeSitterLanguage) => void;
 	parse: (content: string, oldTree?: TreeSitterTree) => TreeSitterTree;
+};
+
+export type TreeSitterGrammar = Record<string, unknown>;
+
+export type TreeSitterLanguage = TreeSitterGrammar;
+
+export type TreeSitterModule = Record<string, unknown> & {
+	default?: TreeSitterGrammar;
+	typescript?: TreeSitterGrammar;
+	tsx?: TreeSitterGrammar;
 };

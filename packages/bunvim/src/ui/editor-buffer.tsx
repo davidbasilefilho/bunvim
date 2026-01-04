@@ -128,13 +128,31 @@ export function EditorBuffer({
 			const lineNum = scrollTop + i;
 			const line = Buffer.getLine(bufferState, lineNum);
 			if (line !== undefined) {
-				const lineText = line.replace(/\n$/, "");
-				const chars = lineText.split("");
+				// Strip any remaining CR/LF characters
+				const lineText = line.replace(/\r/g, "").replace(/\n/g, "");
+				// Split using spread to handle surrogate pairs and combined characters mostly correct
+				const chars = [...lineText];
 				const segments: React.ReactNode[] = [];
 
 				const lineHighlights = highlights.filter(
 					(h) => h.start.line <= lineNum && h.end.line >= lineNum,
 				);
+
+				let currentSpan = "";
+				let currentFg: string | undefined;
+				let currentBg: string | undefined;
+				let currentKey = 0;
+
+				const pushSpan = () => {
+					if (currentSpan.length > 0) {
+						segments.push(
+							<span key={currentKey++} bg={currentBg} fg={currentFg}>
+								{currentSpan}
+							</span>,
+						);
+						currentSpan = "";
+					}
+				};
 
 				for (let col = 0; col < editorWidth; col++) {
 					const char = chars[col] || " ";
@@ -145,6 +163,7 @@ export function EditorBuffer({
 					let fg = colors.fg;
 					const h = lineHighlights.find((h) => {
 						if (h.start.line < lineNum && h.end.line > lineNum) return true;
+
 						if (h.start.line === lineNum && h.end.line === lineNum) {
 							return col >= h.start.column && col < h.end.column;
 						}
@@ -165,41 +184,56 @@ export function EditorBuffer({
 							colors.fg;
 					}
 
+					let bg: string | undefined;
+					let finalFg = fg;
+
 					if (isCursor) {
 						const cursorStyle = getCursorStyle();
 						if (cursorStyle === "block") {
-							segments.push(
-								<span key={col} bg={getCursorBg()} fg={colors.bg}>
-									{char}
-								</span>,
-							);
+							bg = getCursorBg();
+							finalFg = colors.bg;
 						} else {
+							// For line cursor, we render it separately or as part of char
+							// But here we'll simplify for now to block style logic or similar
+							// Actually, original logic split char for line cursor "|" + char
+							// We can't group easily with line cursor inside.
+							// So we flush and render cursor specially.
+							pushSpan();
 							segments.push(
-								<span key={col}>
+								<span key={currentKey++}>
 									<span bg={getCursorBg()} fg={getCursorBg()}>
 										|
 									</span>
 									<span
 										bg={isSelected ? colors.selection : undefined}
-										fg={isSelected ? colors.fg : fg}
+										fg={isSelected ? colors.fg : finalFg}
 									>
 										{char}
 									</span>
 								</span>,
 							);
+							currentSpan = "";
+							currentBg = undefined;
+							currentFg = undefined;
+							continue;
 						}
-					} else {
-						segments.push(
-							<span
-								key={col}
-								bg={isSelected ? colors.selection : undefined}
-								fg={isSelected ? colors.fg : fg}
-							>
-								{char}
-							</span>,
-						);
 					}
+
+					if (isSelected) {
+						bg = colors.selection;
+						finalFg = colors.fg;
+					}
+
+					// Grouping logic
+					if (bg !== currentBg || finalFg !== currentFg) {
+						pushSpan();
+						currentBg = bg;
+						currentFg = finalFg;
+					}
+					currentSpan += char;
 				}
+				pushSpan();
+
 				result.push(<text key={lineNum}>{segments}</text>);
 			} else {
 				result.push(

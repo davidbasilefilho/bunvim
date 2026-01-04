@@ -18,6 +18,7 @@ import { getHighlights } from "../treesitter/highlights";
 import { parse } from "../treesitter/parser";
 import { getClassObject, getFunctionObject } from "../treesitter/textobjects";
 import type { TreeSitterLanguage, TreeSitterTree } from "../treesitter/types";
+import { logSync } from "../utils/logger";
 import { Clue } from "./clue";
 import { HomeBuffer } from "./home-buffer";
 import { InputPopup } from "./input-popup";
@@ -121,7 +122,12 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 					},
 				}));
 			} catch (e) {
-				vim.notify.notify(`Highlight error: ${e}`, "error");
+				const errorMessage = e instanceof Error ? e.message : String(e);
+				const errorDetail =
+					e instanceof Error && e.stack ? e.stack : errorMessage;
+
+				vim.notify.notify(`Highlight error: ${errorDetail}`, "error");
+				logSync.error("Highlighting failed", e);
 			}
 		};
 		updateHighlights();
@@ -404,8 +410,8 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 	);
 
 	const openFile = useCallback(
-		async (filePath: string, split?: "h" | "v") => {
-			try {
+		(filePath: string, split?: "h" | "v") => {
+			const program = Effect.gen(function* (_) {
 				const existingBuffer = state.buffers.find(
 					(b) => b.props.path === filePath || b.props.name === filePath,
 				);
@@ -414,8 +420,17 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 				if (existingBuffer) {
 					buf = existingBuffer;
 				} else {
-					const rawContent = await Bun.file(filePath).text();
-					const content = rawContent.replace(/\r\n/g, "\n");
+					const rawContent = yield* _(
+						Effect.tryPromise({
+							try: () => Bun.file(filePath).text(),
+							catch: (e) => e,
+						}),
+					);
+					// Normalize line endings: CRLF -> LF, CR -> LF
+					const content = (rawContent as string)
+						.replace(/\r\n/g, "\n")
+						.replace(/\r/g, "\n");
+
 					buf = Buffer.createState(content, {
 						type: "file",
 						path: filePath,
@@ -489,9 +504,20 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 						mode: { type: "normal" },
 					};
 				});
-			} catch (e) {
-				vim.notify.notify(`Failed to open file: ${e}`, "error");
-			}
+			}).pipe(
+				Effect.catchAll((e) =>
+					Effect.sync(() => {
+						vim.notify.notify(`Failed to open file: ${e}`, "error");
+						setState((s) => ({
+							...s,
+							mode: { type: "normal" },
+							pendingKeys: "",
+						}));
+					}),
+				),
+			);
+
+			Effect.runPromise(program);
 		},
 		[
 			state.buffers,
@@ -946,6 +972,7 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 						}
 					}
 				}
+				setState((s) => ({ ...s, mode: { type: "normal" }, pendingKeys: "" }));
 				return;
 			}
 

@@ -52,3 +52,42 @@ if (fs.existsSync(bindingGyp)) {
 } else {
 	console.log("tree-sitter directory not found at", treeSitterDir);
 }
+
+const markdownDir = path.resolve(
+	import.meta.dir,
+	"../node_modules/tree-sitter-markdown",
+);
+const markdownBindingGyp = path.join(markdownDir, "binding.gyp");
+
+if (fs.existsSync(markdownBindingGyp)) {
+	console.log("Checking tree-sitter-markdown...");
+
+	let content = fs.readFileSync(markdownBindingGyp, "utf8");
+	if (!content.includes('"cflags_cc"')) {
+		console.log(
+			"Patching tree-sitter-markdown binding.gyp to enable exceptions...",
+		);
+		content = content.replace(
+			'"cflags_c": [',
+			'"cflags_cc": ["-fexceptions"],\n        "cflags_c": [',
+		);
+		fs.writeFileSync(markdownBindingGyp, content);
+	}
+
+	const buildRelease = path.join(
+		markdownDir,
+		"build/Release/tree_sitter_markdown_binding.node",
+	);
+
+	if (!fs.existsSync(buildRelease)) {
+		console.log("Building tree-sitter-markdown...");
+		try {
+			await $`cd ${markdownDir} && node-gyp rebuild`.nothrow();
+			console.log("Built tree-sitter-markdown");
+		} catch (e) {
+			console.error("Failed to build tree-sitter-markdown:", e);
+		}
+	} else {
+		console.log("tree-sitter-markdown already built.");
+	}
+}

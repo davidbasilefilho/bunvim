@@ -5,13 +5,16 @@ export class ShellError extends Error {
 	readonly _tag = "ShellError";
 }
 
-export function runCommand(command: string[], options?: { cwd?: string }) {
+export function runCommand(
+	command: string,
+	options?: { cwd?: string; env?: Record<string, string> },
+) {
 	return Effect.tryPromise({
 		try: async () => {
-			const [cmd, ...args] = command;
-			if (!cmd) return "";
-			const output = await $`${cmd} ${args}`
+			if (!command) return "";
+			const output = await $`sh -c ${command}`
 				.cwd(options?.cwd ?? process.cwd())
+				.env({ ...process.env, ...options?.env })
 				.text();
 			return output;
 		},

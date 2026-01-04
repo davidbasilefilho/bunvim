@@ -1,35 +1,34 @@
 [tasks.build]
 description = "Build for current platform"
-run = "bun build ./src/index.tsx --compile --minify --sourcemap --outfile ../../bin/bvim --external tree-sitter --external tree-sitter-javascript --external tree-sitter-json --external tree-sitter-markdown --external tree-sitter-typescript"
+run = """
+tsdown
+bun build ./dist/index.mjs --compile --minify --sourcemap --outfile ../../bin/bvim --external tree-sitter
+"""
 
 [tasks."build:linux"]
 description = "Build for Linux x64"
-run = "mkdir -p ../../bin && bun build ./src/index.tsx --compile --minify --sourcemap --target=bun-linux-x64 --outfile ../../bin/bvim-linux-x64 --external tree-sitter --external tree-sitter-javascript --external tree-sitter-json --external tree-sitter-markdown --external tree-sitter-typescript"
+run = """
+tsdown
+mkdir -p ../../bin
+bun build ./dist/index.mjs --compile --minify --sourcemap --target=bun-linux-x64 --outfile ../../bin/bvim-linux-x64 --external tree-sitter
+"""
 
 [tasks."build:darwin"]
 description = "Build for macOS ARM64"
-run = "mkdir -p ../../bin && bun build ./src/index.tsx --compile --minify --sourcemap --target=bun-darwin-arm64 --outfile ../../bin/bvim-darwin-arm64 --external tree-sitter --external tree-sitter-javascript --external tree-sitter-json --external tree-sitter-markdown --external tree-sitter-typescript"
+run = """
+tsdown
+mkdir -p ../../bin
+bun build ./dist/index.mjs --compile --minify --sourcemap --target=bun-darwin-arm64 --outfile ../../bin/bvim-darwin-arm64 --external tree-sitter
+"""
 
 [tasks."build:windows"]
 description = "Build for Windows x64"
-run = "mkdir -p ../../bin && bun build ./src/index.tsx --compile --minify --sourcemap --target=bun-windows-x64 --outfile ../../bin/bvim-windows-x64.exe --external tree-sitter --external tree-sitter-javascript --external tree-sitter-json --external tree-sitter-markdown --external tree-sitter-typescript"
+run = """
+tsdown
+mkdir -p ../../bin
+bun build ./dist/index.mjs --compile --minify --sourcemap --target=bun-windows-x64 --outfile ../../bin/bvim-windows-x64.exe --external tree-sitter
+"""
 
 [tasks."build:all"]
 description = "Build for all platforms"
 depends = ["build:linux", "build:darwin", "build:windows"]
-
-[tasks."build:debug"]
-description = "Build for current platform (debug)"
-run = "bun build ./src/index.tsx --compile --outfile ../../bin/bvim-debug --external tree-sitter --external tree-sitter-javascript --external tree-sitter-json --external tree-sitter-markdown --external tree-sitter-typescript"
-
-[tasks."build:linux:debug"]
-description = "Build for Linux x64 (debug)"
-run = "mkdir -p ../../bin && bun build ./src/index.tsx --compile --target=bun-linux-x64 --outfile ../../bin/bvim-linux-x64-debug --external tree-sitter --external tree-sitter-javascript --external tree-sitter-json --external tree-sitter-markdown --external tree-sitter-typescript"
-
-[tasks."build:darwin:debug"]
-description = "Build for macOS ARM64 (debug)"
-run = "mkdir -p ../../bin && bun build ./src/index.tsx --compile --target=bun-darwin-arm64 --outfile ../../bin/bvim-darwin-arm64-debug --external tree-sitter --external tree-sitter-javascript --external tree-sitter-json --external tree-sitter-markdown --external tree-sitter-typescript"
-
-[tasks."build:windows:debug"]
-description = "Build for Windows x64 (debug)"
-run = "mkdir -p ../../bin && bun build ./src/index.tsx --compile --target=bun-windows-x64 --outfile ../../bin/bvim-windows-x64-debug.exe --external tree-sitter --external tree-sitter-javascript --external tree-sitter-json --external tree-sitter-markdown --external tree-sitter-typescript"

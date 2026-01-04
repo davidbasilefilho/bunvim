@@ -1,10 +1,10 @@
 {
 	"name": "bunvim",
-	"module": "src/index.tsx",
+	"module": "dist/index.mjs",
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"dev": "bun run --watch src/index.tsx",
+		"dev": "tsdown --watch --run 'bun run ./dist/index.mjs'",
 		"lint": "biome lint --write .",
 		"format": "biome format --write .",
 		"check": "biome check --write .",
@@ -13,41 +13,35 @@
 		"build:linux": "mise run build:linux",
 		"build:darwin": "mise run build:darwin",
 		"build:windows": "mise run build:windows",
-		"build:debug": "mise run build:debug",
-		"build:linux:debug": "mise run build:linux:debug",
-		"build:darwin:debug": "mise run build:darwin:debug",
-		"build:windows:debug": "mise run build:windows:debug",
-		"check-types": "biome check .",
+		"check-types": "tsc --noEmit",
 		"test": "bun test",
 		"test:watch": "bun test --watch",
 		"postinstall": "bun run scripts/patch-tree-sitter.ts"
 	},
 	"devDependencies": {
+		"@rollup/plugin-babel": "^6.1.0",
+		"@babel/preset-typescript": "^7.26.0",
 		"@types/bun": "^1.3.5",
 		"@types/react": "^19.2.7",
-		"@types/react-dom": "^19.2.3"
-	},
-	"peerDependencies": {
+		"@types/react-dom": "^19.2.3",
+		"babel-plugin-react-compiler": "^1.0.0",
+		"tsdown": "^0.19.0-beta.2",
 		"typescript": "^5.9.2"
 	},
 	"dependencies": {
-		"@opentui/core": "^0.1.63",
-		"@opentui/react": "^0.1.63",
+		"@opentui/core": "^0.1.68",
+		"@opentui/react": "^0.1.68",
 		"@vscode/debugadapter-testsupport": "^1.68.0",
 		"@vscode/debugprotocol": "^1.68.0",
 		"conf": "^15.0.2",
-		"effect": "^3.19.13",
+		"effect": "^3.19.14",
 		"react": "^19.2.3",
 		"tree-sitter": "^0.25.0",
-		"tree-sitter-javascript": "^0.25.0",
-		"tree-sitter-json": "^0.24.8",
-		"tree-sitter-markdown": "^0.7.1",
-		"tree-sitter-typescript": "^0.23.2",
 		"ts-lsp-client": "^1.1.0"
 	},
 	"optionalDependencies": {
-		"@opentui/core-darwin-arm64": "^0.1.63",
-		"@opentui/core-linux-x64": "^0.1.63",
-		"@opentui/core-win32-x64": "^0.1.63"
+		"@opentui/core-darwin-arm64": "^0.1.68",
+		"@opentui/core-linux-x64": "^0.1.68",
+		"@opentui/core-win32-x64": "^0.1.68"
 	}
 }
