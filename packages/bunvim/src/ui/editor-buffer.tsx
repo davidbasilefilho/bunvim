@@ -6,7 +6,7 @@ import type * as Keymap from "../keybindings/keymap";
 import { getColors } from "../theme/manager";
 import type { HighlightRange } from "../treesitter/highlights";
 
-type PaneProps = {
+export type PaneProps = {
 	bufferState: Buffer.BufferState;
 	cursorLine: number;
 	cursorColumn: number;

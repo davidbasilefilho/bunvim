@@ -1,10 +1,10 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { Effect } from "effect";
+import { Data, Effect } from "effect";
 
-export class ConfigLoadError extends Error {
-	readonly _tag = "ConfigLoadError";
-}
+export class ConfigLoadError extends Data.TaggedError("ConfigLoadError")<{
+	message: string;
+}> {}
 
 export function loadConfig() {
 	return Effect.gen(function* () {
@@ -13,13 +13,13 @@ export function loadConfig() {
 
 		const exists = yield* Effect.tryPromise({
 			try: () => file.exists(),
-			catch: (e) => new ConfigLoadError(String(e)),
+			catch: (e) => new ConfigLoadError({ message: String(e) }),
 		});
 
 		if (exists) {
 			yield* Effect.tryPromise({
 				try: () => import(configPath),
-				catch: (e) => new ConfigLoadError(String(e)),
+				catch: (e) => new ConfigLoadError({ message: String(e) }),
 			});
 		}
 	});

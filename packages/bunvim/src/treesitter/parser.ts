@@ -22,7 +22,11 @@ export class TreesitterError extends Data.TaggedError("TreesitterError")<{
 
 type ParserModule = {
 	new (): TreeSitterParser;
-	Query: new (language: unknown, source: string) => TreeSitterQuery;
+	Query: new (language: any, source: string) => TreeSitterQuery;
+};
+
+const isParserModule = (m: unknown): m is ParserModule => {
+	return typeof m === "function" && "Query" in m;
 };
 
 let ParserClass: ParserModule | null = null;
@@ -35,9 +39,11 @@ const initParser = async (): Promise<boolean> => {
 
 	try {
 		const mod = await import("tree-sitter");
-		ParserClass = mod.default as unknown as ParserModule;
-		logSync.debug("TreeSitter initialized from project dependencies");
-		return true;
+		if (isParserModule(mod.default)) {
+			ParserClass = mod.default;
+			logSync.debug("TreeSitter initialized from project dependencies");
+			return true;
+		}
 	} catch (e) {
 		logSync.debug("tree-sitter not available via direct import", e);
 	}
@@ -70,9 +76,16 @@ const initParser = async (): Promise<boolean> => {
 			path.join(dirs.grammars, "package.json"),
 		);
 		const mod = grammarRequire(pkgPath);
-		ParserClass = (mod.default || mod) as unknown as ParserModule;
-		logSync.debug("TreeSitter initialized from dynamic path");
-		return true;
+		const candidate = mod.default || mod;
+		if (isParserModule(candidate)) {
+			ParserClass = candidate;
+			logSync.debug("TreeSitter initialized from dynamic path");
+			return true;
+		}
+		logSync.warn(
+			"Failed to load tree-sitter from dynamic path: invalid module shape",
+		);
+		return false;
 	} catch (e) {
 		logSync.warn("Failed to load tree-sitter from dynamic path", e);
 		return false;

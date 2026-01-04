@@ -1,10 +1,10 @@
-import { Effect } from "effect";
+import { Data, Effect } from "effect";
 import * as Buffer from "../core/buffer";
 import * as Document from "../core/document";
 
-export class FileIOError extends Error {
-	readonly _tag = "FileIOError";
-}
+export class FileIOError extends Data.TaggedError("FileIOError")<{
+	message: string;
+}> {}
 
 export function write(docId: number, path?: string) {
 	return Effect.gen(function* () {
@@ -13,13 +13,13 @@ export function write(docId: number, path?: string) {
 
 		const targetPath = path || doc.path;
 		if (!targetPath) {
-			return yield* Effect.fail(new FileIOError("No file name"));
+			return yield* Effect.fail(new FileIOError({ message: "No file name" }));
 		}
 
 		const content = Buffer.getText(doc.buffer);
 		yield* Effect.tryPromise({
 			try: () => Bun.write(targetPath, content),
-			catch: (e) => new FileIOError(String(e)),
+			catch: (e) => new FileIOError({ message: String(e) }),
 		});
 
 		doc.dirty = false;
@@ -46,7 +46,7 @@ export function edit(path: string) {
 		const file = Bun.file(path);
 		const content = yield* Effect.tryPromise({
 			try: () => file.text(),
-			catch: (e) => new FileIOError(String(e)),
+			catch: (e) => new FileIOError({ message: String(e) }),
 		});
 
 		return Document.create(content, path);

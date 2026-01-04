@@ -1,9 +1,9 @@
 import { $ } from "bun";
-import { Effect } from "effect";
+import { Data, Effect } from "effect";
 
-export class ShellError extends Error {
-	readonly _tag = "ShellError";
-}
+export class ShellError extends Data.TaggedError("ShellError")<{
+	message: string;
+}> {}
 
 export function runCommand(
 	command: string,
@@ -18,6 +18,6 @@ export function runCommand(
 				.text();
 			return output;
 		},
-		catch: (e) => new ShellError(String(e)),
+		catch: (e) => new ShellError({ message: String(e) }),
 	});
 }

@@ -1,7 +1,7 @@
 import { useTerminalDimensions } from "@opentui/react";
 import type React from "react";
 import { useMemo } from "react";
-import { EditorBuffer } from "./editor-buffer";
+import { EditorBuffer, type PaneProps } from "./editor-buffer";
 
 export type WindowAnchor =
 	| "top-left"
@@ -58,7 +58,7 @@ export interface WindowBufferProps extends WindowProps {
 	gutterWidth?: number;
 	onTabClick?: (id: number) => void;
 	onTabClose?: (id: number) => void;
-	editorProps?: Record<string, unknown>;
+	editorProps?: Omit<PaneProps, "width" | "height">;
 }
 
 function shortenPath(path: string, maxLen = 40): string {
@@ -415,8 +415,7 @@ export function BufferWindow({
 			<box flexDirection="column" style={{ height: contentHeight }}>
 				{editorProps && (
 					<EditorBuffer
-						// biome-ignore lint/suspicious/noExplicitAny: Generic component props
-						{...(editorProps as any)}
+						{...editorProps}
 						width={dimensions.width}
 						height={contentHeight}
 					/>
