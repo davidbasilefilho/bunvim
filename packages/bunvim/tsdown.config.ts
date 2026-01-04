@@ -7,7 +7,7 @@ export default defineConfig({
 	platform: "node",
 	target: "esnext",
 	unbundle: false,
-	external: ["bun", "tree-sitter"],
+	external: ["bun", "tree-sitter", /@opentui\/core-.*/],
 	clean: true,
 	plugins: [
 		pluginBabel({

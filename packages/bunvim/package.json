@@ -16,7 +16,8 @@
 		"check-types": "tsc --noEmit",
 		"test": "bun test",
 		"test:watch": "bun test --watch",
-		"postinstall": "bun run scripts/patch-tree-sitter.ts"
+		"postinstall": "bun run scripts/patch-tree-sitter.ts",
+		"fetch-platforms": "bun run scripts/fetch-platforms.ts"
 	},
 	"devDependencies": {
 		"@rollup/plugin-babel": "^6.1.0",

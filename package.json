@@ -10,6 +10,7 @@
 	"private": true,
 	"scripts": {
 		"build": "turbo run build",
+		"build:all": "turbo run build:all",
 		"dev": "turbo run dev",
 		"lint": "turbo run lint",
 		"format": "turbo run format",
