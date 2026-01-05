@@ -2,16 +2,20 @@
 description = "Build for current platform"
 run = """
 tsdown
-bun build ./dist/index.mjs --compile --minify --sourcemap --outfile ../../bin/bvim --external tree-sitter
+bun build ./dist/index.mjs --compile --minify --sourcemap --outfile ./bin/bvim --external tree-sitter
 """
+
+[tasks.dev]
+description = "Start development mode with auto-restart"
+run = "tsdown --watch --on-success 'bun run ./dist/index.mjs'"
 
 [tasks."build:linux"]
 description = "Build for Linux x64"
 run = """
 bun run scripts/fetch-platforms.ts
 tsdown
-mkdir -p ../../bin
-bun build ./dist/index.mjs --compile --minify --sourcemap --target=bun-linux-x64 --outfile ../../bin/bvim-linux-x64 --external tree-sitter
+mkdir -p ./bin
+bun build ./dist/index.mjs --compile --minify --sourcemap --target=bun-linux-x64 --outfile ./bin/bvim-linux-x64 --external tree-sitter
 """
 
 [tasks."build:darwin"]
@@ -19,8 +23,8 @@ description = "Build for macOS ARM64"
 run = """
 bun run scripts/fetch-platforms.ts
 tsdown
-mkdir -p ../../bin
-bun build ./dist/index.mjs --compile --minify --sourcemap --target=bun-darwin-arm64 --outfile ../../bin/bvim-darwin-arm64 --external tree-sitter
+mkdir -p ./bin
+bun build ./dist/index.mjs --compile --minify --sourcemap --target=bun-darwin-arm64 --outfile ./bin/bvim-darwin-arm64 --external tree-sitter
 """
 
 [tasks."build:windows"]
@@ -28,8 +32,8 @@ description = "Build for Windows x64"
 run = """
 bun run scripts/fetch-platforms.ts
 tsdown
-mkdir -p ../../bin
-bun build ./dist/index.mjs --compile --minify --sourcemap --target=bun-windows-x64 --outfile ../../bin/bvim-windows-x64.exe --external tree-sitter
+mkdir -p ./bin
+bun build ./dist/index.mjs --compile --minify --sourcemap --target=bun-windows-x64 --outfile ./bin/bvim-windows-x64.exe --external tree-sitter
 """
 
 [tasks."build:all"]

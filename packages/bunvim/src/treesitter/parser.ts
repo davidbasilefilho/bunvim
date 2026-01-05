@@ -22,7 +22,7 @@ export class TreesitterError extends Data.TaggedError("TreesitterError")<{
 
 type ParserModule = {
 	new (): TreeSitterParser;
-	Query: new (language: any, source: string) => TreeSitterQuery;
+	Query: new (language: TreeSitterLanguage, source: string) => TreeSitterQuery;
 };
 
 const isParserModule = (m: unknown): m is ParserModule => {

@@ -1,5 +1,5 @@
 import { useKeyboard } from "@opentui/react";
-import { useState } from "react";
+import { Activity, useState } from "react";
 
 export type CompletionItem = {
 	label: string;
@@ -71,11 +71,11 @@ export function CompletionMenu({
 					<text fg={i === selectedIndex ? "#c0caf5" : "#a9b1d6"}>
 						{item.label}
 					</text>
-					{item.detail && (
+					<Activity mode={item.detail ? "visible" : "hidden"}>
 						<text fg="#565f89" style={{ marginLeft: 1 }}>
-							{item.detail}
+							{item.detail ?? ""}
 						</text>
-					)}
+					</Activity>
 				</box>
 			))}
 		</box>

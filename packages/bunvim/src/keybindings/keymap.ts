@@ -115,6 +115,10 @@ export const processKey = (
 
 	let keyChar = key.key;
 
+	if (!key.ctrl && !key.meta && key.shift && keyChar.length === 1) {
+		keyChar = keyChar.toUpperCase();
+	}
+
 	if (key.ctrl) {
 		if (keyChar === "h" || keyChar === "backspace" || keyChar === "\x08") {
 			keyChar = "<C-h>";

@@ -261,6 +261,45 @@ src/
 index.tsx        # Entry point
 ```
 
+## React 19 / React Compiler Guidelines
+
+This project uses **React 19.2** with the **React Compiler** (babel-plugin-react-compiler). The compiler automatically handles memoization.
+
+### Rules
+
+| Pattern | Rule |
+|---------|------|
+| `memo()` | **NEVER use**. React Compiler handles this automatically. |
+| `useMemo()` | **NEVER use**. React Compiler handles this automatically. |
+| `useCallback()` | **NEVER use for memoization**. Only use when you need a stable reference for effect dependencies. |
+| `{condition && <Component />}` | **NEVER use**. Always use `<Activity>` instead. |
+
+### Conditional Rendering with Activity
+
+Always use `<Activity>` instead of conditional rendering patterns:
+
+```tsx
+// BAD: Never do this
+{isVisible && <Sidebar />}
+
+// GOOD: Always use Activity
+<Activity mode={isVisible ? 'visible' : 'hidden'}>
+  <Sidebar />
+</Activity>
+```
+
+The `Activity` component:
+- Preserves state when hidden (no remounting)
+- Defers updates for hidden content
+- Cleans up effects when hidden, restores when visible
+- Uses `display: 'none'` internally for hidden mode
+
+Import from React:
+
+```tsx
+import { Activity } from 'react'
+```
+
 ## Coding Standards
 
 Minimal, readable, performant code.

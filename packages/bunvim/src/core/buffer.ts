@@ -120,6 +120,9 @@ export const updateBufferState = (
 export const lineCount = (state: BufferState): number =>
 	Rope.lineCount(state.rope);
 
+export const byteLength = (str: string): number =>
+	Buffer.byteLength(str, "utf8");
+
 export const getLine = (
 	state: BufferState,
 	lineNumber: number,

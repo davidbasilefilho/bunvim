@@ -1,3 +1,4 @@
+import { Activity } from "react";
 import type * as Keymap from "../keybindings/keymap";
 
 type StatuslineProps = {
@@ -60,11 +61,11 @@ export function Statusline({
 			</box>
 
 			<box flexDirection="row" alignItems="center">
-				{pendingKeys && (
+				<Activity mode={pendingKeys ? "visible" : "hidden"}>
 					<text fg="#e0af68" style={{ paddingRight: 1 }}>
-						{pendingKeys}
+						{pendingKeys ?? ""}
 					</text>
-				)}
+				</Activity>
 				<text fg="#c0caf5" style={{ paddingLeft: 1, paddingRight: 1 }}>
 					{position}
 				</text>

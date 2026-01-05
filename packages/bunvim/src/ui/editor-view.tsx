@@ -1,8 +1,9 @@
 import { useKeyboard, useTerminalDimensions } from "@opentui/react";
 import { Effect } from "effect";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Activity, useCallback, useEffect, useRef, useState } from "react";
 import { registerBuiltins } from "../api/builtins";
 import * as Options from "../api/options";
+import { useStore } from "../api/state";
 import { vim } from "../api/vim";
 import { Dialog, DialogItem, DialogList } from "../components/dialog";
 import * as Buffer from "../core/buffer";
@@ -14,13 +15,11 @@ import * as Motions from "../keybindings/motions";
 import { bufferSource, filesSource, grepSource } from "../picker/builtins";
 import { detectLanguage, getGrammar } from "../treesitter/grammars";
 import type { HighlightRange } from "../treesitter/highlights";
-import { getHighlights } from "../treesitter/highlights";
 import { parse } from "../treesitter/parser";
 import { getClassObject, getFunctionObject } from "../treesitter/textobjects";
-import type { TreeSitterLanguage, TreeSitterTree } from "../treesitter/types";
-import { logSync } from "../utils/logger";
 import { Clue } from "./clue";
 import { HomeBuffer } from "./home-buffer";
+import { useHighlights } from "./hooks/use-highlights";
 import { InputPopup } from "./input-popup";
 import { Notifications } from "./notifications";
 import { Picker } from "./picker";
@@ -39,6 +38,7 @@ const DEFAULT_WINDOW: WindowState = {
 	cursorLine: 0,
 	cursorColumn: 0,
 	scrollTop: 0,
+	scrollLeft: 0,
 };
 
 const DEFAULT_BUFFER: Buffer.BufferState = Buffer.createState("", {
@@ -46,8 +46,20 @@ const DEFAULT_BUFFER: Buffer.BufferState = Buffer.createState("", {
 	name: "[Default]",
 });
 
+function BufferHighlight({
+	buffer,
+	onHighlightsChange,
+}: {
+	buffer: Buffer.BufferState;
+	onHighlightsChange: (bufferId: number, highlights: HighlightRange[]) => void;
+}) {
+	useHighlights(buffer, onHighlightsChange);
+	return null;
+}
+
 export function EditorView({ initialFile }: { initialFile?: string }) {
-	const { width: _width, height } = useTerminalDimensions();
+	const { width: termWidth, height: termHeight } = useTerminalDimensions();
+	const { setTerminalSize } = useStore();
 	const [state, setState] = useState<EditorUiState>(() => {
 		const initialBuffer = Buffer.createState(INITIAL_CONTENT, {
 			type: "scratch",
@@ -64,6 +76,7 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 					cursorLine: 0,
 					cursorColumn: 0,
 					scrollTop: 0,
+					scrollLeft: 0,
 				},
 			],
 			activeWindowId: 0,
@@ -78,6 +91,10 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 		};
 	});
 
+	useEffect(() => {
+		setTerminalSize(termWidth, termHeight);
+	}, [termWidth, termHeight, setTerminalSize]);
+
 	const activeWindow =
 		state.windows.find((w) => w.id === state.activeWindowId) ??
 		state.windows[0] ??
@@ -87,58 +104,12 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 		state.buffers[0] ??
 		DEFAULT_BUFFER;
 
-	useEffect(() => {
-		const updateHighlights = async () => {
-			const language = detectLanguage(activeBuffer.props.name || "");
-			if (language === "text") {
-				setState((s) => ({
-					...s,
-					highlights: { ...s.highlights, [activeBuffer.id]: [] },
-				}));
-				return;
-			}
-
-			const effect = Effect.gen(function* (_) {
-				const grammar = yield* _(getGrammar(language));
-				const content = Buffer.getText(activeBuffer);
-				const tree = yield* _(parse(content, grammar as TreeSitterLanguage));
-				const highlights = yield* _(
-					getHighlights(
-						tree as TreeSitterTree,
-						grammar as TreeSitterLanguage,
-						language,
-					),
-				);
-				return highlights;
-			});
-
-			try {
-				const highlights = await Effect.runPromise(effect);
-				setState((s) => ({
-					...s,
-					highlights: {
-						...s.highlights,
-						[activeBuffer.id]: highlights as HighlightRange[],
-					},
-				}));
-			} catch (e) {
-				const errorMessage = e instanceof Error ? e.message : String(e);
-				const errorDetail =
-					e instanceof Error && e.stack ? e.stack : errorMessage;
-
-				vim.notify.notify(`Highlight error: ${errorDetail}`, "error");
-				logSync.error("Highlighting failed", e);
-			}
-		};
-		updateHighlights();
-	}, [activeBuffer]);
-
 	const keySequenceRef = useRef<Keymap.KeySequenceState>(
 		Keymap.createInitialState(),
 	);
 
 	const gutterWidth = Options.opt.number ? 4 : 0;
-	const editorHeight = height - 1;
+	const editorHeight = termHeight - 1;
 
 	const clampCursor = useCallback(
 		(
@@ -427,9 +398,13 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 						}),
 					);
 					// Normalize line endings: CRLF -> LF, CR -> LF
-					const content = (rawContent as string)
+					let content = (rawContent as string)
 						.replace(/\r\n/g, "\n")
 						.replace(/\r/g, "\n");
+
+					if (content.endsWith("\n")) {
+						content = content.slice(0, -1);
+					}
 
 					buf = Buffer.createState(content, {
 						type: "file",
@@ -458,6 +433,7 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 							cursorLine: 0,
 							cursorColumn: 0,
 							scrollTop: 0,
+							scrollLeft: 0,
 						});
 						return {
 							...s,
@@ -496,6 +472,7 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 										cursorLine: 0,
 										cursorColumn: 0,
 										scrollTop: 0,
+										scrollLeft: 0,
 									}
 								: w,
 						),
@@ -582,6 +559,7 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 								cursorLine: 0,
 								cursorColumn: 0,
 								scrollTop: 0,
+								scrollLeft: 0,
 							}
 						: w,
 				),
@@ -1758,14 +1736,27 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 
 	return (
 		<box flexDirection="column" flexGrow={1} onMouseScroll={onMouseScroll}>
+			{state.buffers.map((buffer) => (
+				<BufferHighlight
+					key={buffer.id}
+					buffer={buffer}
+					onHighlightsChange={(bufferId, highlights) =>
+						setState((s) => ({
+							...s,
+							highlights: { ...s.highlights, [bufferId]: highlights },
+						}))
+					}
+				/>
+			))}
 			<box flexDirection="row" flexGrow={1}>
-				{state.isHomeBuffer ? (
+				<Activity mode={state.isHomeBuffer ? "visible" : "hidden"}>
 					<box flexGrow={1}>
 						<HomeBuffer onAction={onHomeAction} />
 					</box>
-				) : (
-					renderWindows(state.windows)
-				)}
+				</Activity>
+				<Activity mode={state.isHomeBuffer ? "hidden" : "visible"}>
+					{renderWindows(state.windows)}
+				</Activity>
 			</box>
 
 			<Statusline

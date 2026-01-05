@@ -1,3 +1,5 @@
+import { Activity } from "react";
+
 export type LabelProps = {
 	text: string;
 	htmlFor?: string; // TUI doesn't really use htmlFor, but for API compatibility
@@ -12,11 +14,11 @@ export function Label({
 	return (
 		<box flexDirection="row" marginBottom={0}>
 			<text fg="#c0caf5">{text}</text>
-			{required && (
+			<Activity mode={required ? "visible" : "hidden"}>
 				<text fg="#f7768e" style={{ marginLeft: 1 }}>
 					*
 				</text>
-			)}
+			</Activity>
 		</box>
 	);
 }

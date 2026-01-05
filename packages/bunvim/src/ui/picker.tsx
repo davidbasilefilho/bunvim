@@ -1,6 +1,8 @@
 import { useKeyboard } from "@opentui/react";
 import { Effect } from "effect";
-import { useEffect, useMemo, useState } from "react";
+import type React from "react";
+import { Activity, useEffect, useState } from "react";
+import * as Options from "../api/options";
 import { fuzzyMatch } from "../picker/fuzzy";
 import type { PickerItem, PickerSource } from "../picker/source";
 import { getColors } from "../theme/manager";
@@ -25,7 +27,7 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [loading, setLoading] = useState(true);
 	const [previewContent, setPreviewContent] = useState<string[]>([]);
-	const [_previewHighlights, setPreviewHighlights] = useState<HighlightRange[]>(
+	const [previewHighlights, setPreviewHighlights] = useState<HighlightRange[]>(
 		[],
 	);
 	const [previewLoading, setPreviewLoading] = useState(false);
@@ -44,17 +46,14 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 		fetchItems();
 	}, [source, query]);
 
-	const filteredItems = useMemo(
-		() =>
-			query.length === 0
-				? items
-				: items
-						.map((item) => ({ item, score: fuzzyMatch(query, item.text) }))
-						.filter((res) => res.score > 0)
-						.sort((a, b) => b.score - a.score)
-						.map((res) => res.item),
-		[items, query],
-	);
+	const filteredItems =
+		query.length === 0
+			? items
+			: items
+					.map((item) => ({ item, score: fuzzyMatch(query, item.text) }))
+					.filter((res) => res.score > 0)
+					.sort((a, b) => b.score - a.score)
+					.map((res) => res.item);
 
 	useEffect(() => {
 		const selectedItem = filteredItems[selectedIndex];
@@ -172,6 +171,120 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 	const data = selectedItem?.data as { file?: string } | undefined;
 	const hasPreview = data?.file !== undefined;
 
+	const captureColors: Record<string, string> = {
+		keyword: colors.keyword,
+		string: colors.string,
+		comment: colors.comment,
+		function: colors.function,
+		variable: colors.variable,
+		type: colors.type,
+		constant: colors.constant,
+		number: colors.constant,
+		operator: colors.keyword,
+		property: colors.variable,
+		parameter: colors.variable,
+		label: colors.keyword,
+		"variable.builtin": colors.variable,
+		"variable.parameter": colors.variable,
+		"function.builtin": colors.function,
+		"function.call": colors.function,
+		"punctuation.bracket": colors.keyword,
+		"punctuation.delimiter": colors.keyword,
+		tag: colors.keyword,
+		attribute: colors.variable,
+		namespace: colors.type,
+	};
+
+	const renderPreviewLines = () => {
+		const tabSize = Options.opt.tabstop;
+		const maxPreviewLines = 40;
+		const linesToRender = previewContent.slice(0, maxPreviewLines);
+
+		return linesToRender.map((lineText, lineIdx) => {
+			const chars = [...lineText];
+			const segments: React.ReactNode[] = [];
+			const lineHighlights = previewHighlights.filter(
+				(h) => h.start.line <= lineIdx && h.end.line >= lineIdx,
+			);
+
+			let visualIdx = 0;
+			let byteIdx = 0;
+			let currentSpan = "";
+			let currentFg: string | undefined;
+			let currentKey = 0;
+
+			const pushSpan = () => {
+				if (currentSpan.length > 0) {
+					segments.push(
+						<text key={currentKey++} fg={currentFg}>
+							{currentSpan}
+						</text>,
+					);
+					currentSpan = "";
+				}
+			};
+
+			for (let bufIdx = 0; bufIdx < chars.length; bufIdx++) {
+				const char = chars[bufIdx] || "";
+				const charWidth = char === "\t" ? tabSize : 1;
+				const charBytes = Buffer.byteLength(char);
+				const charStartVisual = visualIdx;
+				const charStartByte = byteIdx;
+
+				if (visualIdx >= 80) break;
+
+				visualIdx += charWidth;
+				byteIdx += charBytes;
+
+				let fg = colors.fg;
+				const highlight = lineHighlights.find((h) => {
+					if (h.start.line < lineIdx && h.end.line > lineIdx) {
+						return true;
+					}
+					if (h.start.line === lineIdx && h.end.line === lineIdx) {
+						return (
+							charStartByte >= h.start.column && charStartByte < h.end.column
+						);
+					}
+					if (h.start.line === lineIdx) {
+						return charStartByte >= h.start.column;
+					}
+					if (h.end.line === lineIdx) {
+						return charStartByte < h.end.column;
+					}
+					return false;
+				});
+
+				if (highlight) {
+					const baseCapture = highlight.capture.split(".")[0] || "";
+					fg =
+						captureColors[highlight.capture] ||
+						captureColors[baseCapture] ||
+						colors.fg;
+				}
+
+				let displayChar = char === "\t" ? " ".repeat(charWidth) : char;
+				const remainingWidth = 80 - charStartVisual;
+				if (displayChar.length > remainingWidth) {
+					displayChar = displayChar.slice(0, remainingWidth);
+				}
+
+				if (fg !== currentFg) {
+					pushSpan();
+					currentFg = fg;
+				}
+				currentSpan += displayChar;
+			}
+			pushSpan();
+
+			return (
+				<box key={lineIdx} flexDirection="row">
+					{segments.length > 0 ? segments : <text fg={colors.fg}> </text>}
+				</box>
+			);
+		});
+	};
+
 	return (
 		<Window
 			id={999}
@@ -246,7 +359,7 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 							))
 						)}
 					</box>
-					{hasPreview && (
+					<Activity mode={hasPreview ? "visible" : "hidden"}>
 						<box
 							flexGrow={1}
 							flexBasis={0}
@@ -257,14 +370,10 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 							{previewLoading ? (
 								<text fg={colors.muted}>Loading preview...</text>
 							) : (
-								previewContent.slice(0, 40).map((line, i) => (
-									<text key={i} fg={colors.fg}>
-										{line.slice(0, 80) || " "}
-									</text>
-								))
+								renderPreviewLines()
 							)}
 						</box>
-					)}
+					</Activity>
 				</box>
 				<KeymapIndicator
 					keys={[

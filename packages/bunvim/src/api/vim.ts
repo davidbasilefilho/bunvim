@@ -1,6 +1,7 @@
 import * as autocmd from "./autocmd";
 import * as buffer from "./buffer";
 import * as command from "./command";
+import * as conf from "./conf";
 import * as dirs from "./dirs";
 import * as filetype from "./filetype";
 import * as keymap from "./keymap";
@@ -8,8 +9,8 @@ import * as notify from "./notify";
 import * as options from "./options";
 import * as plugin from "./plugin";
 import { registry } from "./registry";
+import { useStore } from "./state";
 import * as status from "./status";
-import * as store from "./store";
 import * as window from "./window";
 
 export const vim = {
@@ -37,7 +38,8 @@ export const vim = {
 	notify,
 	command,
 	dirs,
-	store,
+	conf,
+	state: useStore,
 	status,
 	g: {} as Record<string, unknown>,
 };

@@ -1,5 +1,4 @@
 import type React from "react";
-import { useMemo } from "react";
 import * as Options from "../api/options";
 import * as Buffer from "../core/buffer";
 import type * as Keymap from "../keybindings/keymap";
@@ -11,6 +10,7 @@ export type PaneProps = {
 	cursorLine: number;
 	cursorColumn: number;
 	scrollTop: number;
+	scrollLeft?: number;
 	width: number;
 	height: number;
 	mode: Keymap.EditorMode;
@@ -26,6 +26,7 @@ export function EditorBuffer({
 	cursorLine,
 	cursorColumn,
 	scrollTop,
+	scrollLeft = 0,
 	width,
 	height,
 	mode,
@@ -39,7 +40,7 @@ export function EditorBuffer({
 	const editorWidth = width - gutterWidth - 1;
 	const editorHeight = height;
 
-	const lines = useMemo(() => {
+	const lines = (() => {
 		const captureColors: Record<string, string> = {
 			keyword: colors.keyword,
 			string: colors.string,
@@ -49,12 +50,12 @@ export function EditorBuffer({
 			type: colors.type,
 			constant: colors.constant,
 			number: colors.constant,
-			operator: colors.keyword,
-			property: colors.variable,
-			parameter: colors.variable,
+			operator: colors.operator,
+			property: colors.property,
+			parameter: colors.parameter,
 			label: colors.keyword,
-			"variable.builtin": colors.variable,
-			"variable.parameter": colors.variable,
+			"variable.builtin": colors.match,
+			"variable.parameter": colors.parameter,
 			"function.builtin": colors.function,
 			"function.call": colors.function,
 			"punctuation.bracket": colors.keyword,
@@ -64,7 +65,7 @@ export function EditorBuffer({
 			namespace: colors.type,
 		};
 
-		const result = [];
+		const result: React.ReactNode[] = [];
 
 		const getCursorStyle = (): "block" | "line" => {
 			if (mode.type === "insert" || mode.type === "command") {
@@ -74,16 +75,25 @@ export function EditorBuffer({
 		};
 
 		const getCursorBg = (): string => {
-			if (mode.type === "insert") return colors.success;
-			if (mode.type === "visual") return colors.selection;
-			if (mode.type === "command" || mode.type === "search")
+			if (mode.type === "insert") {
+				return colors.success;
+			}
+			if (mode.type === "visual") {
+				return colors.selection;
+			}
+			if (mode.type === "command" || mode.type === "search") {
 				return colors.warning;
-			if (mode.type === "operator-pending") return colors.warning;
+			}
+			if (mode.type === "operator-pending") {
+				return colors.warning;
+			}
 			return colors.cursor;
 		};
 
 		const isInVisualSelection = (lineNum: number, col: number): boolean => {
-			if (mode.type !== "visual") return false;
+			if (mode.type !== "visual") {
+				return false;
+			}
 
 			const startLine = Math.min(visualAnchorLine ?? cursorLine, cursorLine);
 			const endLine = Math.max(visualAnchorLine ?? cursorLine, cursorLine);
@@ -93,7 +103,9 @@ export function EditorBuffer({
 			}
 
 			if (mode.subtype === "char") {
-				if (lineNum < startLine || lineNum > endLine) return false;
+				if (lineNum < startLine || lineNum > endLine) {
+					return false;
+				}
 				const anchorLine = visualAnchorLine ?? cursorLine;
 				const anchorCol = visualAnchorColumn ?? cursorColumn;
 
@@ -114,7 +126,9 @@ export function EditorBuffer({
 			}
 
 			if (mode.subtype === "block") {
-				if (lineNum < startLine || lineNum > endLine) return false;
+				if (lineNum < startLine || lineNum > endLine) {
+					return false;
+				}
 				const anchorCol = visualAnchorColumn ?? cursorColumn;
 				const startCol = Math.min(anchorCol, cursorColumn);
 				const endCol = Math.max(anchorCol, cursorColumn);
@@ -124,13 +138,14 @@ export function EditorBuffer({
 			return false;
 		};
 
+		const tabSize = Options.opt.tabstop;
+
 		for (let i = 0; i < editorHeight; i++) {
 			const lineNum = scrollTop + i;
 			const line = Buffer.getLine(bufferState, lineNum);
+
 			if (line !== undefined) {
-				// Strip any remaining CR/LF characters
 				const lineText = line.replace(/\r/g, "").replace(/\n/g, "");
-				// Split using spread to handle surrogate pairs and combined characters mostly correct
 				const chars = [...lineText];
 				const segments: React.ReactNode[] = [];
 
@@ -138,6 +153,8 @@ export function EditorBuffer({
 					(h) => h.start.line <= lineNum && h.end.line >= lineNum,
 				);
 
+				let visualIdx = 0;
+				let byteIdx = 0;
 				let currentSpan = "";
 				let currentFg: string | undefined;
 				let currentBg: string | undefined;
@@ -146,40 +163,55 @@ export function EditorBuffer({
 				const pushSpan = () => {
 					if (currentSpan.length > 0) {
 						segments.push(
-							<span key={currentKey++} bg={currentBg} fg={currentFg}>
+							<text key={currentKey++} bg={currentBg} fg={currentFg}>
 								{currentSpan}
-							</span>,
+							</text>,
 						);
 						currentSpan = "";
 					}
 				};
 
-				for (let col = 0; col < editorWidth; col++) {
-					const char = chars[col] || " ";
-					const isCursor =
-						isActive && lineNum === cursorLine && col === cursorColumn;
-					const isSelected = isInVisualSelection(lineNum, col);
+				for (let bufIdx = 0; bufIdx < chars.length; bufIdx++) {
+					const char = chars[bufIdx] || "";
+					const charWidth = char === "\t" ? tabSize : 1;
+					const charBytes = Buffer.byteLength(char);
+					const charStartVisual = visualIdx;
+					const charEndVisual = visualIdx + charWidth;
+					const charStartByte = byteIdx;
+					visualIdx += charWidth;
+					byteIdx += charBytes;
+
+					if (charEndVisual <= scrollLeft) {
+						continue;
+					}
+					if (charStartVisual >= scrollLeft + editorWidth) {
+						break;
+					}
 
 					let fg = colors.fg;
-					const h = lineHighlights.find((h) => {
-						if (h.start.line < lineNum && h.end.line > lineNum) return true;
+					const highlight = lineHighlights.find((h) => {
+						if (h.start.line < lineNum && h.end.line > lineNum) {
+							return true;
+						}
 
 						if (h.start.line === lineNum && h.end.line === lineNum) {
-							return col >= h.start.column && col < h.end.column;
+							return (
+								charStartByte >= h.start.column && charStartByte < h.end.column
+							);
 						}
 						if (h.start.line === lineNum) {
-							return col >= h.start.column;
+							return charStartByte >= h.start.column;
 						}
 						if (h.end.line === lineNum) {
-							return col < h.end.column;
+							return charStartByte < h.end.column;
 						}
 						return false;
 					});
 
-					if (h) {
-						const baseCapture = h.capture.split(".")[0] || "";
+					if (highlight) {
+						const baseCapture = highlight.capture.split(".")[0] || "";
 						fg =
-							captureColors[h.capture] ||
+							captureColors[highlight.capture] ||
 							captureColors[baseCapture] ||
 							colors.fg;
 					}
@@ -187,30 +219,34 @@ export function EditorBuffer({
 					let bg: string | undefined;
 					let finalFg = fg;
 
+					const isCursor =
+						isActive && lineNum === cursorLine && bufIdx === cursorColumn;
+					const isSelected = isInVisualSelection(lineNum, bufIdx);
+
 					if (isCursor) {
 						const cursorStyle = getCursorStyle();
 						if (cursorStyle === "block") {
 							bg = getCursorBg();
 							finalFg = colors.bg;
 						} else {
-							// For line cursor, we render it separately or as part of char
-							// But here we'll simplify for now to block style logic or similar
-							// Actually, original logic split char for line cursor "|" + char
-							// We can't group easily with line cursor inside.
-							// So we flush and render cursor specially.
 							pushSpan();
+							let cursorChar = char || " ";
+							if (charStartVisual < scrollLeft) {
+								cursorChar = cursorChar.slice(scrollLeft - charStartVisual);
+							}
+
 							segments.push(
-								<span key={currentKey++}>
-									<span bg={getCursorBg()} fg={getCursorBg()}>
+								<text key={currentKey++}>
+									<text bg={getCursorBg()} fg={getCursorBg()}>
 										|
-									</span>
-									<span
+									</text>
+									<text
 										bg={isSelected ? colors.selection : undefined}
 										fg={isSelected ? colors.fg : finalFg}
 									>
-										{char}
-									</span>
-								</span>,
+										{cursorChar}
+									</text>
+								</text>,
 							);
 							currentSpan = "";
 							currentBg = undefined;
@@ -224,17 +260,64 @@ export function EditorBuffer({
 						finalFg = colors.fg;
 					}
 
-					// Grouping logic
+					let displayChar = char === "\t" ? " ".repeat(charWidth) : char;
+
+					if (charStartVisual < scrollLeft) {
+						displayChar = displayChar.slice(scrollLeft - charStartVisual);
+					}
+					const remainingWidth = scrollLeft + editorWidth - charStartVisual;
+					if (displayChar.length > remainingWidth) {
+						displayChar = displayChar.slice(0, remainingWidth);
+					}
+
 					if (bg !== currentBg || finalFg !== currentFg) {
 						pushSpan();
 						currentBg = bg;
 						currentFg = finalFg;
 					}
-					currentSpan += char;
+					if (displayChar) {
+						currentSpan += displayChar;
+					} else if (isCursor) {
+						currentSpan += " ";
+					}
 				}
+
+				if (
+					isActive &&
+					lineNum === cursorLine &&
+					cursorColumn === chars.length
+				) {
+					if (visualIdx >= scrollLeft && visualIdx < scrollLeft + editorWidth) {
+						const cursorStyle = getCursorStyle();
+						if (cursorStyle === "block") {
+							pushSpan();
+							segments.push(
+								<text key={currentKey++} bg={getCursorBg()} fg={colors.bg}>
+									{" "}
+								</text>,
+							);
+						} else {
+							pushSpan();
+							segments.push(
+								<text key={currentKey++} bg={getCursorBg()} fg={getCursorBg()}>
+									|
+								</text>,
+							);
+						}
+					}
+				}
+
 				pushSpan();
 
-				result.push(<text key={lineNum}>{segments}</text>);
+				if (segments.length === 0) {
+					segments.push(<text key="empty"> </text>);
+				}
+
+				result.push(
+					<box key={lineNum} flexDirection="row" height={1}>
+						{segments}
+					</box>,
+				);
 			} else {
 				result.push(
 					<text key={lineNum} fg={colors.muted}>
@@ -244,20 +327,7 @@ export function EditorBuffer({
 			}
 		}
 		return result;
-	}, [
-		colors, // Added dependency
-		bufferState,
-		scrollTop,
-		editorHeight,
-		editorWidth,
-		highlights,
-		cursorLine,
-		cursorColumn,
-		mode,
-		isActive,
-		visualAnchorLine,
-		visualAnchorColumn,
-	]);
+	})();
 
 	return (
 		<box
@@ -265,7 +335,7 @@ export function EditorBuffer({
 			style={{
 				width,
 				height,
-				backgroundColor: isActive ? colors.bg : colors.surface, // Used surface for inactive
+				backgroundColor: isActive ? colors.bg : colors.surface,
 			}}
 		>
 			<box

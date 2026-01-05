@@ -1,7 +1,19 @@
 import { Effect, pipe } from "effect";
 import * as Buffer from "../core/buffer";
 import { runCommand } from "../utils/shell";
-import type { PickerSource } from "./source";
+import type { PickerItem, PickerSource } from "./source";
+
+type FileCache = {
+	items: PickerItem[];
+	timestamp: number;
+};
+
+const CACHE_TTL_MS = 30000;
+let filesCache: FileCache | null = null;
+
+export function clearFilesCache() {
+	filesCache = null;
+}
 
 export const bufferSource: PickerSource = {
 	name: "Buffers",
@@ -16,20 +28,28 @@ export const bufferSource: PickerSource = {
 
 export const filesSource: PickerSource = {
 	name: "Files",
-	getItems: (_query: string) =>
-		pipe(
+	getItems: (_query: string) => {
+		const now = Date.now();
+		if (filesCache && now - filesCache.timestamp < CACHE_TTL_MS) {
+			return Effect.succeed(filesCache.items);
+		}
+
+		return pipe(
 			runCommand("fd --type f --hidden --exclude .git --exclude node_modules"),
-			Effect.map((output) =>
-				output
+			Effect.map((output) => {
+				const items = output
 					.split("\n")
 					.filter(Boolean)
 					.map((file) => ({
 						text: file,
 						data: { file },
-					})),
-			),
+					}));
+				filesCache = { items, timestamp: now };
+				return items;
+			}),
 			Effect.catchAll(() => Effect.succeed([])),
-		),
+		);
+	},
 };
 
 export const grepSource = (file?: string): PickerSource => ({

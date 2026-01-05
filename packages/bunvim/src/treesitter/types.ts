@@ -29,12 +29,14 @@ export type TreeSitterEdit = {
 };
 
 export type TreeSitterQuery = {
-	captures: (node: any) => Array<{ name: string; node: TreeSitterNode }>;
+	captures: (
+		node: TreeSitterNode,
+	) => Array<{ name: string; node: TreeSitterNode }>;
 };
 
 export type TreeSitterParser = {
-	setLanguage: (language: any) => void;
-	parse: (content: string, oldTree?: any) => TreeSitterTree;
+	setLanguage: (language: TreeSitterLanguage) => void;
+	parse: (content: string, oldTree?: TreeSitterTree) => TreeSitterTree;
 };
 
 export type TreeSitterGrammar = Record<string, unknown>;

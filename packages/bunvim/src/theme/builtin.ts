@@ -16,6 +16,9 @@ export interface Theme {
 		readonly function: string;
 		readonly type: string;
 		readonly variable: string;
+		readonly property: string;
+		readonly parameter: string;
+		readonly operator: string;
 		readonly constant: string;
 
 		// New semantic properties
@@ -71,6 +74,9 @@ export const tokyoNight: Theme = {
 		function: "#7aa2f7",
 		type: "#2ac3de",
 		variable: "#c0caf5",
+		property: "#7aa2f7",
+		parameter: "#e0af68",
+		operator: "#89ddff",
 		constant: "#ff9e64",
 		border: "#16161e",
 		surface: "#1f2335",
@@ -122,6 +128,9 @@ export const catppuccin: Theme = {
 		function: "#89b4fa",
 		type: "#f9e2af",
 		variable: "#cdd6f4",
+		property: "#b4befe",
+		parameter: "#eba0ac",
+		operator: "#89dceb",
 		constant: "#fab387",
 		border: "#11111b",
 		surface: "#313244",
@@ -162,17 +171,20 @@ export const catppuccinMacchiato: Theme = {
 		bg: "#24273a",
 		fg: "#cad3f5",
 		cursor: "#f4dbd6",
-		selection: "#494d64",
-		lineNumber: "#494d64",
+		selection: "#5b6078",
+		lineNumber: "#5b6078",
 		activeLineNumber: "#a5adcb",
 		statuslineBg: "#1e2030",
 		statuslineFg: "#c6a0f6",
-		comment: "#5b6078",
+		comment: "#6e738d",
 		keyword: "#c6a0f6",
 		string: "#a6da95",
 		function: "#8aadf4",
 		type: "#eed49f",
 		variable: "#cad3f5",
+		property: "#b7bdf8",
+		parameter: "#ee99a0",
+		operator: "#91d7e3",
 		constant: "#f5a97f",
 		border: "#181926",
 		surface: "#363a4f",

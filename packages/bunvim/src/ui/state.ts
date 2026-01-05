@@ -11,6 +11,7 @@ export type WindowState = {
 	cursorLine: number;
 	cursorColumn: number;
 	scrollTop: number;
+	scrollLeft: number;
 };
 
 export type EditorUiState = {

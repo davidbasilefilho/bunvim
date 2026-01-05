@@ -1,4 +1,5 @@
 import { useTerminalDimensions } from "@opentui/react";
+import { Activity } from "react";
 import * as Options from "../api/options";
 
 type KeybindHint = {
@@ -56,11 +57,11 @@ export function HomeBuffer({ onAction }: { onAction?: (key: string) => void }) {
 							<text fg="#bb9af7" style={{ width: 12 }}>
 								{leader} {hint.key}
 							</text>
-							{showIcon && hint.icon && (
+							<Activity mode={showIcon && hint.icon ? "visible" : "hidden"}>
 								<text fg="#7aa2f7" style={{ width: 3 }}>
 									{hint.icon}
 								</text>
-							)}
+							</Activity>
 							<text fg="#c0caf5">{hint.description}</text>
 						</box>
 					))}

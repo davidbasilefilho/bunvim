@@ -1,6 +1,6 @@
-import { useTerminalDimensions } from "@opentui/react";
 import type React from "react";
-import { useMemo } from "react";
+import { Activity } from "react";
+import { useStore } from "../api/state";
 import { EditorBuffer, type PaneProps } from "./editor-buffer";
 
 export type WindowAnchor =
@@ -233,9 +233,9 @@ export function Window({
 	singleBuffer: _singleBuffer = false,
 	children,
 }: WindowProps) {
-	const { width: termWidth, height: termHeight } = useTerminalDimensions();
+	const { terminalWidth: termWidth, terminalHeight: termHeight } = useStore();
 
-	const dimensions = useMemo(() => {
+	const dimensions = (() => {
 		let w = resolveSize(widthProp, termWidth, termWidth);
 		let h = resolveSize(heightProp, termHeight, termHeight);
 
@@ -245,18 +245,9 @@ export function Window({
 		if (maxHeight !== undefined) h = Math.min(h, maxHeight);
 
 		return { width: w, height: h };
-	}, [
-		widthProp,
-		heightProp,
-		termWidth,
-		termHeight,
-		minWidth,
-		maxWidth,
-		minHeight,
-		maxHeight,
-	]);
+	})();
 
-	const position = useMemo(() => {
+	const position = (() => {
 		if (type === "normal" || type === "split") {
 			return { x: 0, y: 0 };
 		}
@@ -268,9 +259,9 @@ export function Window({
 			termHeight,
 			margins,
 		);
-	}, [type, anchor, dimensions, termWidth, termHeight, margins]);
+	})();
 
-	const containerStyle = useMemo(() => {
+	const containerStyle = (() => {
 		const base: Record<string, unknown> = {
 			width: dimensions.width,
 			height: dimensions.height,
@@ -285,7 +276,7 @@ export function Window({
 		}
 
 		return base;
-	}, [type, dimensions, position, zIndex, dim]);
+	})();
 
 	return (
 		<box flexDirection="column" style={containerStyle}>
@@ -302,7 +293,7 @@ export function Window({
 			<box flexDirection="column" flexGrow={1}>
 				{children}
 			</box>
-			{dim && (
+			<Activity mode={dim ? "visible" : "hidden"}>
 				<box
 					position="absolute"
 					left={0}
@@ -312,7 +303,7 @@ export function Window({
 					backgroundColor="#000000"
 					opacity={0.3}
 				/>
-			)}
+			</Activity>
 		</box>
 	);
 }
@@ -339,9 +330,9 @@ export function BufferWindow({
 	onTabClose,
 	editorProps,
 }: WindowBufferProps) {
-	const { width: termWidth, height: termHeight } = useTerminalDimensions();
+	const { terminalWidth: termWidth, terminalHeight: termHeight } = useStore();
 
-	const dimensions = useMemo(() => {
+	const dimensions = (() => {
 		let w = resolveSize(widthProp, termWidth, termWidth);
 		let h = resolveSize(heightProp, termHeight, termHeight);
 
@@ -351,18 +342,9 @@ export function BufferWindow({
 		if (maxHeight !== undefined) h = Math.min(h, maxHeight);
 
 		return { width: w, height: h };
-	}, [
-		widthProp,
-		heightProp,
-		termWidth,
-		termHeight,
-		minWidth,
-		maxWidth,
-		minHeight,
-		maxHeight,
-	]);
+	})();
 
-	const position = useMemo(() => {
+	const position = (() => {
 		if (type === "normal" || type === "split") {
 			return { x: 0, y: 0 };
 		}
@@ -374,9 +356,9 @@ export function BufferWindow({
 			termHeight,
 			margins,
 		);
-	}, [type, anchor, dimensions, termWidth, termHeight, margins]);
+	})();
 
-	const containerStyle = useMemo(() => {
+	const containerStyle = (() => {
 		const base: Record<string, unknown> = {
 			width: dimensions.width,
 			height: dimensions.height,
@@ -391,14 +373,14 @@ export function BufferWindow({
 		}
 
 		return base;
-	}, [type, dimensions, position, zIndex, dim]);
+	})();
 
 	const hasHeader = (buffers.length > 0 || title !== undefined) && !hideTabline;
 	const contentHeight = hasHeader ? dimensions.height - 1 : dimensions.height;
 
 	return (
 		<box flexDirection="column" style={containerStyle}>
-			{hasHeader && (
+			<Activity mode={hasHeader ? "visible" : "hidden"}>
 				<WindowHeader
 					buffers={
 						singleBuffer
@@ -411,17 +393,34 @@ export function BufferWindow({
 					onTabClick={onTabClick}
 					onTabClose={onTabClose}
 				/>
-			)}
+			</Activity>
 			<box flexDirection="column" style={{ height: contentHeight }}>
-				{editorProps && (
+				<Activity mode={editorProps ? "visible" : "hidden"}>
 					<EditorBuffer
-						{...editorProps}
+						{...(editorProps ?? {
+							bufferState: {
+								id: 0,
+								rope: { content: "", lineStarts: [0] },
+								modified: false,
+								version: 0,
+								props: { type: "scratch" },
+							},
+							cursorLine: 0,
+							cursorColumn: 0,
+							scrollTop: 0,
+							mode: { type: "normal" },
+							visualAnchorLine: 0,
+							visualAnchorColumn: 0,
+							isActive: false,
+							gutterWidth: 0,
+							highlights: [],
+						})}
 						width={dimensions.width}
 						height={contentHeight}
 					/>
-				)}
+				</Activity>
 			</box>
-			{dim && (
+			<Activity mode={dim ? "visible" : "hidden"}>
 				<box
 					position="absolute"
 					left={0}
@@ -431,7 +430,7 @@ export function BufferWindow({
 					backgroundColor="#000000"
 					opacity={0.3}
 				/>
-			)}
+			</Activity>
 		</box>
 	);
 }
