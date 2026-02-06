@@ -2,15 +2,33 @@
 
 ## AGENTS Guidelines for This Repository
 
-**Bunvim** is a Neovim-like terminal editor built with TypeScript and Bun. Native Neovim keybindings, LSP, DAP, and Treesitter support. Effect-TS for all side-effect management. Plugin-first architecture for easy extensibility.
+**Bunvim** is a Neovim-like terminal editor built with TypeScript, Bun, and SolidJS. Native Neovim keybindings, LSP, DAP, and Treesitter support. Effect-TS for side-effect management in the SDK. Plugin-first architecture for easy extensibility.
 
 ### Design Philosophy
 
-Neovim experience in TypeScript. Same keybindings developers already know. Effect-TS everywhere. Bun for performance. Plugins as Bun projects for trivial authoring.
+Neovim experience in TypeScript. Same keybindings developers already know. Effect-TS in the SDK for type-safe side-effect management. Consumer packages (editor, plugins) choose their own async patterns. Bun for performance. Plugins as Bun projects for trivial authoring.
 
 ### Visual Language
 
 Brutalist aesthetic. No border radius. Element separation via background color contrast. Sharp edges. Functional over decorative.
+
+### Architecture Migration (2026)
+
+The project has been migrated from React to SolidJS for improved performance and fine-grained reactivity:
+
+```
+packages/
+├── sdk/           # Core logic, SolidJS stores, shared APIs
+├── editor/        # Editor application (SolidJS + OpenTUI Solid)
+└── bunvim/        # Legacy React implementation (deprecated)
+```
+
+**Key Changes:**
+- UI: React → SolidJS with OpenTUI Solid
+- State: Zustand/React useState → SolidJS stores (createStore)
+- Build: tsdown + Babel → bun build --compile
+- Conditional Rendering: Activity → Show/Switch/Match
+- Lists: .map() → For/Index components
 
 ## Useful Commands Recap
 
@@ -68,8 +86,9 @@ Never use subagents.
 
 | Purpose | Package | Context7 ID |
 |---------|---------|-------------|
-| UI | `@opentui/core`, `@opentui/react` | `/sst/opentui` |
+| UI | `@opentui/core`, `@opentui/solid` | `/sst/opentui` |
 | Effects | `effect` | `/effect-ts/effect` |
+| State | `solid-js` | `/solidjs/solid` |
 | LSP | `ts-lsp-client` | N/A |
 | DAP | `@vscode/debugprotocol`, `@vscode/debugadapter-testsupport` | `/websites/microsoft_github_io_debug-adapter-protocol` |
 | Treesitter | `tree-sitter` (native bindings) | `/tree-sitter/tree-sitter` |
@@ -87,9 +106,58 @@ Never use subagents.
 
 Monorepo structure using Turborepo.
 
-- `packages/bunvim`: Core editor logic and UI.
+### New Structure (Post-Migration)
 
-See `packages/bunvim/AGENTS.md` for package-specific architecture and guidelines.
+```
+packages/
+├── sdk/               # Core logic, SolidJS stores, shared APIs
+│   ├── src/
+│   │   ├── stores/    # SolidJS stores (bufferStore, windowStore, editorUiStore)
+│   │   ├── utils/     # Rope, position, logger, shell
+│   │   ├── modes/     # Mode definitions and helpers
+│   │   ├── keybindings/  # Keymap processing
+│   │   ├── picker/    # Fuzzy finder types
+│   │   └── treesitter/   # Treesitter integration
+│   └── package.json
+├── editor/            # The actual editor application (SolidJS + OpenTUI Solid)
+│   ├── src/
+│   │   ├── ui/        # UI components (editor-view, statusline)
+│   │   └── index.tsx  # Entry point
+│   └── package.json
+└── bunvim/            # Legacy React implementation (deprecated)
+```
+
+### State Management with SolidJS Stores
+
+```typescript
+import { bufferStore, windowStore, editorUiStore } from "@bunvim/sdk";
+
+// Access reactive state directly
+const activeBuffer = () => bufferStore.buffers.find(b => b.id === activeWindow()?.bufId);
+
+// Update state with actions
+import { bufferActions, windowActions, editorUiActions } from "@bunvim/sdk";
+bufferActions.createState("content", { type: "file", path: "file.ts" });
+windowActions.setCursor(winId, line, column);
+editorUiActions.setMode({ type: "insert" });
+```
+
+### Build Commands
+
+```bash
+# SDK package
+cd packages/sdk
+bun run build      # Build SDK
+bun run test       # Run tests
+
+# Editor package  
+cd packages/editor
+bun run build      # Build single binary with bun build --compile
+bun run build:all  # Build for all platforms (linux, darwin, windows)
+bun run dev        # Development mode
+```
+
+See individual package AGENTS.md for more details.
 
 ## Task Management
 

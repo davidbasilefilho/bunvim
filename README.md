@@ -8,9 +8,26 @@ A Neovim-like terminal editor built with TypeScript, Bun, and OpenTUI.
 
 - **Modal Editing**: Vim-compatible modes (Normal, Insert, Visual, Command).
 - **Fast**: Built on Bun for high performance.
-- **Modern**: React-based UI with OpenTUI.
+- **Modern**: SolidJS-based UI with fine-grained reactivity.
 - **Extensible**: Plugin system using TypeScript.
 - **Built-in**: Fuzzy finder, LSP support, Treesitter highlighting.
+
+## Architecture
+
+Bunvim uses a modular architecture with clear separation of concerns:
+
+```
+packages/
+├── sdk/           # Core logic, SolidJS stores, shared APIs
+├── editor/        # Editor application (SolidJS + OpenTUI Solid)
+└── bunvim/        # Legacy React implementation (deprecated)
+```
+
+**Key Technologies:**
+- **SolidJS**: Fine-grained reactive UI framework
+- **Effect-TS**: Type-safe effect management
+- **OpenTUI**: Terminal UI components
+- **Bun**: Fast JavaScript runtime and bundler
 
 ## Installation
 
@@ -26,8 +43,15 @@ cd bunvim
 mise trust
 mise install
 bun install
-bun run build
-./bin/bvim
+
+# Build SDK
+cd packages/sdk && bun run build
+
+# Build Editor
+cd ../editor && bun run build
+
+# Run
+./dist/bvim
 ```
 
 ## Usage
