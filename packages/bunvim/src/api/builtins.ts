@@ -29,7 +29,6 @@ export function registerBuiltins(
 	undo: () => void,
 	redo: () => void,
 	navigateSearch: (reverse?: boolean) => void,
-	applyTreesitterObject: (type: "if" | "af" | "ic" | "ac") => void,
 	moveFocus: (direction: "h" | "j" | "k" | "l") => void,
 	jumpToPosition: (bufferId: number, line: number, column: number) => void,
 	showHover: () => void,
@@ -60,11 +59,6 @@ export function registerBuiltins(
 		vim.keymap.set("n", m, () => executeMotion(m, 1));
 		vim.keymap.set("o", m, () => applyOperator(m, 1));
 	}
-
-	vim.keymap.set("o", "if", () => applyTreesitterObject("if"));
-	vim.keymap.set("o", "af", () => applyTreesitterObject("af"));
-	vim.keymap.set("o", "ic", () => applyTreesitterObject("ic"));
-	vim.keymap.set("o", "ac", () => applyTreesitterObject("ac"));
 
 	vim.keymap.set("n", "d", () =>
 		setState((s: EditorUiState) => ({

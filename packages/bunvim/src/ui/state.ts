@@ -1,7 +1,7 @@
 import type * as Buffer from "../core/buffer";
 import type * as Keymap from "../keybindings/keymap";
 import type { PickerSource } from "../picker/source";
-import type { HighlightRange } from "../treesitter/highlights";
+import type { HighlightRange } from "../treesitter";
 
 export type WindowState = {
 	id: number;

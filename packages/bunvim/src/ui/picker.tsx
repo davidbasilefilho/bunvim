@@ -6,11 +6,13 @@ import * as Options from "../api/options";
 import { fuzzyMatch } from "../picker/fuzzy";
 import type { PickerItem, PickerSource } from "../picker/source";
 import { getColors } from "../theme/manager";
-import { detectLanguage, getGrammar } from "../treesitter/grammars";
-import type { HighlightRange } from "../treesitter/highlights";
-import { getHighlights } from "../treesitter/highlights";
-import { parse } from "../treesitter/parser";
-import type { TreeSitterLanguage, TreeSitterTree } from "../treesitter/types";
+import type { HighlightRange } from "../treesitter";
+import {
+	detectLanguage,
+	getHighlights,
+	initializeParsers,
+	isLanguageSupported,
+} from "../treesitter";
 import { KeymapIndicator } from "./keymap-indicator";
 import { Window } from "./window";
 
@@ -74,25 +76,16 @@ export function Picker({ source, onSelect, onClose }: PickerProps) {
 				setPreviewContent(lines);
 
 				const language = detectLanguage(filePath);
-				if (language !== "text") {
-					const effect = Effect.gen(function* (_) {
-						const grammar = yield* _(getGrammar(language));
-						const tree = yield* _(
-							parse(content, grammar as TreeSitterLanguage),
-						);
-						const highlights = yield* _(
-							getHighlights(
-								tree as TreeSitterTree,
-								grammar as TreeSitterLanguage,
-								language,
-							),
-						);
+				if (isLanguageSupported(language)) {
+					initializeParsers();
+					const effect = Effect.gen(function* () {
+						const highlights = yield* getHighlights(content, language);
 						return highlights;
 					});
 
 					try {
 						const highlights = await Effect.runPromise(effect);
-						setPreviewHighlights(highlights as HighlightRange[]);
+						setPreviewHighlights(highlights);
 					} catch {
 						setPreviewHighlights([]);
 					}

@@ -3,7 +3,7 @@ import * as Options from "../api/options";
 import * as Buffer from "../core/buffer";
 import type * as Keymap from "../keybindings/keymap";
 import { getColors } from "../theme/manager";
-import type { HighlightRange } from "../treesitter/highlights";
+import type { HighlightRange } from "../treesitter";
 
 export type PaneProps = {
 	bufferState: Buffer.BufferState;

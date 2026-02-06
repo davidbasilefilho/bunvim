@@ -13,10 +13,7 @@ import * as Keymap from "../keybindings/keymap";
 import * as Motions from "../keybindings/motions";
 
 import { bufferSource, filesSource, grepSource } from "../picker/builtins";
-import { detectLanguage, getGrammar } from "../treesitter/grammars";
-import type { HighlightRange } from "../treesitter/highlights";
-import { parse } from "../treesitter/parser";
-import { getClassObject, getFunctionObject } from "../treesitter/textobjects";
+import type { HighlightRange } from "../treesitter";
 import { Clue } from "./clue";
 import { HomeBuffer } from "./home-buffer";
 import { useHighlights } from "./hooks/use-highlights";
@@ -1256,82 +1253,6 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 		[jumpToPattern, clampCursor, adjustScroll],
 	);
 
-	const applyTreesitterObject = useCallback(
-		async (type: "if" | "af" | "ic" | "ac") => {
-			const language = detectLanguage(activeBuffer.props.name || "");
-			if (language === "text") return;
-
-			const effect = Effect.gen(function* (_) {
-				const grammar = yield* _(getGrammar(language));
-				const content = Buffer.getText(activeBuffer);
-				const tree = yield* _(parse(content, grammar));
-
-				const pos = {
-					line: activeWindow.cursorLine,
-					column: activeWindow.cursorColumn,
-				};
-
-				let obj: ReturnType<typeof getFunctionObject>;
-				if (type === "if" || type === "af") {
-					obj = getFunctionObject(
-						tree,
-						pos,
-						type === "if" ? "inner" : "around",
-					);
-				} else {
-					obj = getClassObject(tree, pos, type === "ic" ? "inner" : "around");
-				}
-				if (!obj) return;
-
-				setState((s) => {
-					if (s.mode.type !== "operator-pending") return s;
-					const operator = s.mode.operator;
-					const range = obj.range;
-					const text = Buffer.getTextInRange(activeBuffer, range) ?? "";
-
-					if (operator === "y") {
-						return { ...s, yankRegister: text, mode: { type: "normal" } };
-					}
-
-					const newBuffer = Buffer.deleteInRange(activeBuffer, range);
-					if (!newBuffer) return { ...s, mode: { type: "normal" } };
-
-					Undo.addEntry([{ type: "delete", range, text }]);
-					const { line, column } = clampCursor(
-						range.start.line,
-						range.start.column,
-						newBuffer,
-						operator === "c" ? { type: "insert" } : { type: "normal" },
-					);
-
-					return {
-						...s,
-						buffers: s.buffers.map((b) =>
-							b.id === activeBuffer.id ? newBuffer : b,
-						),
-						windows: s.windows.map((w) =>
-							w.id === s.activeWindowId
-								? {
-										...w,
-										cursorLine: line,
-										cursorColumn: column,
-										scrollTop: adjustScroll(line, w.scrollTop),
-									}
-								: w,
-						),
-						mode: operator === "c" ? { type: "insert" } : { type: "normal" },
-						yankRegister: text,
-					};
-				});
-			});
-
-			try {
-				await Effect.runPromise(effect);
-			} catch (_e) {}
-		},
-		[activeBuffer, activeWindow, clampCursor, adjustScroll],
-	);
-
 	const moveFocus = useCallback((direction: "h" | "j" | "k" | "l") => {
 		setState((s) => {
 			const activeIdx = s.windows.findIndex((w) => w.id === s.activeWindowId);
@@ -1475,7 +1396,6 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 				undo,
 				redo,
 				navigateSearch,
-				applyTreesitterObject,
 				moveFocus,
 				jumpToPosition,
 				() => {
@@ -1515,7 +1435,6 @@ export function EditorView({ initialFile }: { initialFile?: string }) {
 		undo,
 		redo,
 		navigateSearch,
-		applyTreesitterObject,
 		moveFocus,
 		jumpToPosition,
 		moveBuffer,
