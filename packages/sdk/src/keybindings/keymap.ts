@@ -46,6 +46,25 @@ export function get_keymaps(): KeymapEntry[] {
 	return keymaps;
 }
 
+export function getMatchingKeymaps(
+	prefix: string,
+	mode: EditorMode,
+): KeymapEntry[] {
+	const shortName = modeToShortName(mode);
+	const mappings = keymaps.filter((m) => {
+		const modes = Array.isArray(m.mode) ? m.mode : [m.mode];
+		return modes.includes(shortName);
+	});
+
+	if (prefix === "") {
+		return [];
+	}
+
+	return mappings.filter(
+		(m) => m.lhs.startsWith(prefix) && m.lhs.length > prefix.length,
+	);
+}
+
 export function clear(): void {
 	keymaps = [];
 }

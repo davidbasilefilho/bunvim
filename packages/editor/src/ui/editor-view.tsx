@@ -2,33 +2,41 @@ import type { KeyEvent, KeySequenceState } from "@bunvim/sdk";
 import {
 	activePicker,
 	bufferActions,
+	bufferSource,
 	bufferStore,
 	createInitialState,
 	editorUiActions,
 	editorUiStore,
+	filesSource,
+	getColors,
+	grepSource,
 	normal,
 	processKey,
 	setActivePicker,
 	setSize,
-	terminalState,
 	windowActions,
 	windowStore,
 } from "@bunvim/sdk";
 import { useKeyboard, useTerminalDimensions } from "@opentui/solid";
 import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { registerDefaultKeymaps } from "../keymaps";
+import { ClueMenu } from "./clue-menu";
+import { Dashboard, type DashboardKeyHandler } from "./dashboard";
+import { InputPopup } from "./input-popup";
 import { Statusline } from "./statusline";
 
 interface EditorViewProps {
 	initialFile?: string;
 }
 
-export function EditorView(props: EditorViewProps) {
+export function EditorView(_props: EditorViewProps) {
 	const termDims = useTerminalDimensions();
 	const width = () => termDims().width;
 	const height = () => termDims().height;
 	const [keySequenceState, setKeySequenceState] =
 		createSignal<KeySequenceState>(createInitialState());
+	let dashboardKeyHandler: DashboardKeyHandler | undefined;
+	const colors = createMemo(() => getColors());
 
 	onMount(() => {
 		setSize(width(), height());
@@ -105,6 +113,36 @@ export function EditorView(props: EditorViewProps) {
 		}
 	};
 
+	const handleDashboardAction = (actionId: string) => {
+		switch (actionId) {
+			case "new-file": {
+				const buf = bufferActions.emptyState({
+					type: "scratch",
+					name: "[No Name]",
+				});
+				const win = activeWindow();
+				if (win) {
+					windowActions.setBuffer(win.id, buf.id);
+					windowActions.setCursor(win.id, 0, 0);
+				}
+				editorUiActions.setIsHomeBuffer(false);
+				editorUiActions.setMode(normal());
+				break;
+			}
+			case "find-file":
+				setActivePicker(filesSource);
+				break;
+			case "grep":
+				setActivePicker(grepSource());
+				break;
+			case "recent":
+				setActivePicker(bufferSource);
+				break;
+			case "quit":
+				process.exit(0);
+		}
+	};
+
 	const handleKeyResult = (result: import("@bunvim/sdk").KeyHandlerResult) => {
 		editorUiActions.clearPendingKeys();
 
@@ -141,23 +179,108 @@ export function EditorView(props: EditorViewProps) {
 		}
 	};
 
+	const saveBuffer = async (
+		buf: ReturnType<typeof activeBuffer>,
+	): Promise<boolean> => {
+		if (!buf) return false;
+		if (buf.props.type !== "file" || !buf.props.path) return false;
+
+		try {
+			const content = bufferActions.getText(buf);
+			await Bun.write(buf.props.path, content);
+			bufferActions.markSaved(buf.id);
+			return true;
+		} catch {
+			return false;
+		}
+	};
+
+	const saveAllBuffers = async (): Promise<boolean> => {
+		const modifiedBuffers = bufferStore.buffers.filter(
+			(b) => b.modified && b.props.type === "file" && b.props.path,
+		);
+		for (const buf of modifiedBuffers) {
+			const ok = await saveBuffer(buf);
+			if (!ok) return false;
+		}
+		return true;
+	};
+
+	const hasUnsavedBuffers = (): boolean => {
+		return bufferStore.buffers.some(
+			(b) => b.modified && b.props.type === "file",
+		);
+	};
+
 	const executeCommand = (command: string) => {
 		const trimmed = command.trim();
 
+		// :w - save current buffer
+		if (trimmed === "w" || trimmed === "write") {
+			const buf = activeBuffer();
+			saveBuffer(buf);
+			editorUiActions.setMode(normal());
+			return;
+		}
+
+		// :wq - save and quit
+		if (trimmed === "wq" || trimmed === "x") {
+			const buf = activeBuffer();
+			saveBuffer(buf).then(() => {
+				process.exit(0);
+			});
+			return;
+		}
+
+		// :q - quit (refuse if unsaved changes)
 		if (trimmed === "q" || trimmed === "quit") {
+			if (hasUnsavedBuffers()) {
+				editorUiActions.setMode(normal());
+				return;
+			}
 			process.exit(0);
 		}
 
+		// :q! - force quit
 		if (trimmed === "q!") {
 			process.exit(0);
 		}
 
+		// :qa - quit all (refuse if unsaved)
+		if (trimmed === "qa" || trimmed === "qall") {
+			if (hasUnsavedBuffers()) {
+				editorUiActions.setMode(normal());
+				return;
+			}
+			process.exit(0);
+		}
+
+		// :qa! - force quit all
+		if (trimmed === "qa!") {
+			process.exit(0);
+		}
+
+		// :wqa / :wqa! - save all and quit
+		if (
+			trimmed === "wqa" ||
+			trimmed === "wqa!" ||
+			trimmed === "xa" ||
+			trimmed === "xa!"
+		) {
+			saveAllBuffers().then(() => {
+				process.exit(0);
+			});
+			return;
+		}
+
+		// :e <file> - open file
 		if (trimmed.startsWith("e ")) {
 			const filePath = trimmed.slice(2).trim();
 			openFile(filePath);
 			return;
 		}
 
+		// :<number> - jump to line
 		if (/^\d+$/.test(trimmed)) {
 			const lineNum = Number.parseInt(trimmed, 10) - 1;
 			const win = activeWindow();
@@ -179,15 +302,33 @@ export function EditorView(props: EditorViewProps) {
 		if (!buf) return;
 
 		const pos = win.cursor;
-		const newBuffer = bufferActions.insertAt(buf.id, pos, char);
+		const newBuffer = bufferActions.insertAt(buf, pos, char);
 
 		if (newBuffer) {
-			windowActions.setCursor(win.id, pos.line, pos.column + char.length);
+			bufferActions.updateBufferState(buf.id, () => newBuffer);
+			if (char === "\n") {
+				windowActions.setCursor(win.id, pos.line + 1, 0);
+			} else {
+				windowActions.setCursor(win.id, pos.line, pos.column + char.length);
+			}
 		}
 	};
 
 	useKeyboard((key) => {
 		if (activePicker()) return;
+
+		if (
+			editorUiStore.isHomeBuffer &&
+			editorUiStore.mode.type === "normal" &&
+			dashboardKeyHandler
+		) {
+			const handled = dashboardKeyHandler({
+				name: key.name,
+				sequence: key.sequence,
+				ctrl: key.ctrl ?? false,
+			});
+			if (handled) return;
+		}
 
 		let actualKey =
 			key.name || (key.sequence?.length === 1 ? key.sequence : "");
@@ -218,19 +359,36 @@ export function EditorView(props: EditorViewProps) {
 				}
 			} else if (key.name === "backspace") {
 				const win = activeWindow();
-				if (win && (win.cursor.column > 0 || win.cursor.line > 0)) {
-					windowActions.setCursor(
-						win.id,
-						win.cursor.line,
-						Math.max(0, win.cursor.column - 1),
-					);
+				const buf = activeBuffer();
+				if (win && buf && (win.cursor.column > 0 || win.cursor.line > 0)) {
+					const curLine = win.cursor.line;
+					const curCol = win.cursor.column;
+
+					let startLine: number;
+					let startCol: number;
+
+					if (curCol > 0) {
+						startLine = curLine;
+						startCol = curCol - 1;
+					} else {
+						const prevLine = bufferActions.getLine(buf, curLine - 1);
+						startLine = curLine - 1;
+						startCol = prevLine?.length ?? 0;
+					}
+
+					const deleteRange = {
+						start: { line: startLine, column: startCol },
+						end: { line: curLine, column: curCol },
+					};
+
+					const newBuffer = bufferActions.deleteInRange(buf, deleteRange);
+					if (newBuffer) {
+						bufferActions.updateBufferState(buf.id, () => newBuffer);
+						windowActions.setCursor(win.id, startLine, startCol);
+					}
 				}
 			} else if (key.name === "return") {
 				insertChar("\n");
-				const win = activeWindow();
-				if (win) {
-					windowActions.setCursor(win.id, win.cursor.line + 1, 0);
-				}
 			} else if (
 				key.sequence &&
 				key.sequence.length === 1 &&
@@ -265,21 +423,37 @@ export function EditorView(props: EditorViewProps) {
 
 	const renderBufferContent = () => {
 		const buf = activeBuffer();
-		if (!buf) return null;
+		if (!buf) {
+			return (
+				<box
+					flexGrow={1}
+					flexDirection="column"
+					alignItems="center"
+					justifyContent="center"
+				>
+					<text fg={colors().muted}>No buffer</text>
+				</box>
+			);
+		}
 
-		const lines = bufferActions.getText(buf)?.split("\n") ?? [];
+		const content = bufferActions.getText(buf);
+		const lines = content ? content.split("\n") : [];
 		const win = activeWindow();
 		const startLine = win?.scrollTop ?? 0;
-		const endLine = Math.min(startLine + editorHeight(), lines.length);
+		const visibleLines = editorHeight();
+		const endLine = Math.min(startLine + visibleLines, lines.length);
+		const displayLines = lines.slice(startLine, endLine);
 
 		return (
-			<For each={lines.slice(startLine, endLine)}>
-				{(line) => (
-					<box flexDirection="row">
-						<text fg="#c0caf5">{line || " "}</text>
-					</box>
-				)}
-			</For>
+			<box flexGrow={1} flexDirection="column">
+				<For each={displayLines}>
+					{(line) => (
+						<box flexDirection="row" height={1}>
+							<text fg={colors().fg}>{line || " "}</text>
+						</box>
+					)}
+				</For>
+			</box>
 		);
 	};
 
@@ -288,17 +462,12 @@ export function EditorView(props: EditorViewProps) {
 			<Show
 				when={!editorUiStore.isHomeBuffer}
 				fallback={
-					<box flexGrow={1} style={{ backgroundColor: "#1a1b26" }}>
-						<box flexDirection="column" padding={2}>
-							<text fg="#7aa2f7" style={{ marginBottom: 1 }}>
-								Welcome to Bunvim!
-							</text>
-							<text fg="#c0caf5">Press : to enter commands</text>
-							<text fg="#c0caf5">Use :e filename to open a file</text>
-							<text fg="#c0caf5">Press i to enter insert mode</text>
-							<text fg="#c0caf5">Press Esc to return to normal mode</text>
-						</box>
-					</box>
+					<Dashboard
+						onAction={handleDashboardAction}
+						onReady={(handler) => {
+							dashboardKeyHandler = handler;
+						}}
+					/>
 				}
 			>
 				<box flexGrow={1} flexDirection="column" style={{ padding: 0 }}>
@@ -316,34 +485,18 @@ export function EditorView(props: EditorViewProps) {
 			/>
 
 			<Show when={editorUiStore.mode.type === "command"}>
-				<box
-					position="absolute"
-					left={0}
-					bottom={0}
-					width="100%"
-					height={1}
-					style={{ backgroundColor: "#1f2335" }}
-				>
-					<text fg="#ff9e64">:</text>
-					<text fg="#c0caf5">{editorUiStore.mode.input}</text>
-				</box>
+				<InputPopup label="COMMAND" value={editorUiStore.mode.input} icon=":" />
 			</Show>
 
 			<Show when={editorUiStore.mode.type === "search"}>
-				<box
-					position="absolute"
-					left={0}
-					bottom={0}
-					width="100%"
-					height={1}
-					style={{ backgroundColor: "#1f2335" }}
-				>
-					<text fg="#ff9e64">
-						{editorUiStore.mode.direction === "forward" ? "/" : "?"}
-					</text>
-					<text fg="#c0caf5">{editorUiStore.mode.input}</text>
-				</box>
+				<InputPopup
+					label="SEARCH"
+					value={editorUiStore.mode.input}
+					icon={editorUiStore.mode.direction === "forward" ? "/" : "?"}
+				/>
 			</Show>
+
+			<ClueMenu />
 		</box>
 	);
 }
