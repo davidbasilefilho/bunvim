@@ -24,6 +24,7 @@ packages/
 ```
 
 **Key Technologies:**
+
 - **SolidJS**: Fine-grained reactive UI framework
 - **Effect-TS**: Type-safe effect management
 - **OpenTUI**: Terminal UI components

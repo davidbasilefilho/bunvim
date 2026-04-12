@@ -16,25 +16,26 @@ Thank you for your interest in contributing to Bunvim!
 
 ## Development
 
--   **Run locally**:
-    ```bash
-    bun dev
-    # or inside packages/bunvim
-    bun run dev
-    ```
--   **Lint & Format**:
-    ```bash
-    bun run check
-    ```
--   **Test**:
-    ```bash
-    bun test
-    ```
+- **Run locally**:
+  ```bash
+  bun dev
+  # or inside packages/bunvim
+  bun run dev
+  ```
+- **Lint & Format**:
+  ```bash
+  bun run check
+  ```
+- **Test**:
+  ```bash
+  bun test
+  ```
 
 ## Project Structure
 
 This is a monorepo managed by Turborepo.
--   `packages/bunvim`: The core editor.
+
+- `packages/bunvim`: The core editor.
 
 ## Pull Requests
 

@@ -5,6 +5,7 @@ Core SDK for Bunvim - contains state management, utilities, and shared APIs.
 ## Overview
 
 The SDK provides the foundation for the Bunvim editor with:
+
 - **SolidJS stores** for reactive state management
 - **Buffer management** with rope data structure
 - **Window management** for multi-pane editing
@@ -25,9 +26,9 @@ bun install @bunvim/sdk
 import { bufferStore, bufferActions } from "@bunvim/sdk";
 
 // Create a buffer
-const buf = bufferActions.createState("content", { 
-  type: "file", 
-  path: "file.ts" 
+const buf = bufferActions.createState("content", {
+  type: "file",
+  path: "file.ts",
 });
 
 // Get buffer

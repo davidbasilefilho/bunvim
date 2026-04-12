@@ -4,37 +4,12 @@
 
 This package contains the core logic, state management, and shared APIs for Bunvim.
 
-### Architecture
-
-```
-src/
-├── stores/           # SolidJS stores for reactive state
-│   ├── bufferStore.ts    # Buffer state and operations
-│   ├── windowStore.ts    # Window state and operations
-│   ├── editorUiStore.ts  # Editor UI state (mode, keys, etc.)
-│   ├── terminalStore.ts  # Terminal dimensions
-│   └── index.ts          # Exports
-├── utils/            # Utility modules
-│   ├── rope.ts       # Rope data structure for text
-│   ├── position.ts   # Position and range types
-│   ├── logger.ts     # Effect-TS logging
-│   └── shell.ts      # Shell command execution
-├── modes/            # Editor mode definitions
-│   └── mode.ts       # Mode types and helpers
-├── keybindings/      # Keybinding system
-│   ├── keymap.ts     # Keymap processing
-│   └── motions.ts    # Motion definitions
-├── picker/           # Fuzzy finder
-│   └── source.ts     # Picker source types
-└── treesitter/       # Treesitter integration
-    └── index.ts      # Client, highlight range types, highlight extraction
-```
-
 ### State Management
 
 All state is managed through SolidJS stores:
 
 #### Buffer Store
+
 ```typescript
 import { bufferStore, bufferActions } from "@bunvim/sdk";
 
@@ -57,6 +32,7 @@ bufferActions.lineCount(buf.id);
 ```
 
 #### Window Store
+
 ```typescript
 import { windowStore, windowActions } from "@bunvim/sdk";
 
@@ -77,6 +53,7 @@ windowActions.moveBuffer("h");
 ```
 
 #### Editor UI Store
+
 ```typescript
 import { editorUiStore, editorUiActions } from "@bunvim/sdk";
 
@@ -101,6 +78,7 @@ editorUiActions.setHighlights(bufferId, highlights);
 ### Store Patterns
 
 #### Accessing Store Values
+
 ```typescript
 // Direct access (reactive)
 const buffers = () => bufferStore.buffers;
@@ -108,17 +86,18 @@ const windows = () => windowStore.windows;
 
 // Derived values with createMemo
 const activeWindow = createMemo(() => {
-  return windowStore.windows.find(w => w.id === windowStore.activeWindowId);
+  return windowStore.windows.find((w) => w.id === windowStore.activeWindowId);
 });
 ```
 
 #### Store Updates
+
 ```typescript
 // Direct property update
 setStore("property", value);
 
 // Nested update
-setStore("buffers", buffers => [...buffers, newBuffer]);
+setStore("buffers", (buffers) => [...buffers, newBuffer]);
 
 // Batch update
 setStore({
@@ -130,6 +109,7 @@ setStore({
 ### Utility Modules
 
 #### Rope
+
 ```typescript
 import { Rope } from "@bunvim/sdk";
 
@@ -140,6 +120,7 @@ const updated = Rope.insert(rope, offset, text);
 ```
 
 #### Position
+
 ```typescript
 import { position, range } from "@bunvim/sdk";
 

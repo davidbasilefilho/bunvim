@@ -1,30 +1,20 @@
 {
-	"$schema": "https://opencode.ai/config.json",
-	"lsp": {
-		"biome": {
-			"disabled": false,
-			"command": ["bunx", "biome", "lsp-proxy"],
-			"extensions": [
-				".js",
-				".mjs",
-				".cjs",
-				".ts",
-				".mts",
-				".cts",
-				".d.ts",
-				".jsx",
-				".tsx",
-				".css",
-				".json",
-				".jsonc",
-				".graphql",
-				".gql",
-				".html",
-				".vue",
-				".svelte",
-				".astro",
-				".grit"
-			]
-		}
-	}
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "context7": {
+      "type": "local",
+      "enabled": true,
+      "command": [
+        "bun",
+        "x",
+        "--bun",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "websearch": {
+      "type": "remote",
+      "enabled": true,
+      "url": "https://mcp.exa.ai/mcp"
+    }
+  }
 }

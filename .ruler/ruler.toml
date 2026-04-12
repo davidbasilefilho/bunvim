@@ -1,0 +1,29 @@
+# Ruler Configuration File
+# See https://ai.intellectronica.net/ruler for documentation.
+
+# Default agents when --agents is not specified
+default_agents = ["claude", "zed", "gemini", "antigravity", "copilot", "agents", "opencode"]
+
+# Enable skills support (experimental)
+[skills]
+enabled = true
+
+# Nested rule loading
+nested = false
+
+# Gitignore management
+[gitignore]
+enabled = true
+local = false
+
+# MCP Server Configurations
+[mcp]
+enabled = true
+strategy = "merge"
+
+[mcp_servers.context7]
+command = "bun"
+args = ["x", "--bun", "@upstash/context7-mcp"]
+
+[mcp_servers.websearch]
+url = "https://mcp.exa.ai/mcp"

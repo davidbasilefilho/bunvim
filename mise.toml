@@ -1,9 +1,28 @@
 [tools]
 bun = "latest"
-biome = "latest"
+node = "latest"
+"npm:oxlint" = "latest"
 zig = "latest"
-
-[settings]
+"npm:oxfmt" = "latest"
+"npm:oxlint-tsgolint" = "latest"
 
 [settings.npm]
 package_manager = "bun"
+
+[env]
+_.path = "./.mise/bin"
+
+[tasks.build]
+run = "cd packages/sdk && bun run build && cd ../editor && bun run build"
+
+[tasks.build-all]
+run = "cd packages/sdk && bun run build && cd ../editor && bun run build:all"
+
+[tasks.build-linux]
+run = "cd packages/sdk && bun run build && cd ../editor && bun run src/build.ts linux"
+
+[tasks.build-darwin]
+run = "cd packages/sdk && bun run build && cd ../editor && bun run src/build.ts darwin"
+
+[tasks.build-windows]
+run = "cd packages/sdk && bun run build && cd ../editor && bun run src/build.ts windows"

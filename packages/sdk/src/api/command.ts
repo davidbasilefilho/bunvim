@@ -1,33 +1,27 @@
 import type { Effect } from "effect";
 
-export type CommandHandler = (
-	args: string,
-) => void | Effect.Effect<void, never, never>;
+export type CommandHandler = (args: string) => void | Effect.Effect<void, never, never>;
 
 export type CommandDefinition = {
-	name: string;
-	handler: CommandHandler;
-	desc?: string;
+  name: string;
+  handler: CommandHandler;
+  desc?: string;
 };
 
 const commands: Map<string, CommandDefinition> = new Map();
 
-export function registerCommand(
-	name: string,
-	handler: CommandHandler,
-	desc?: string,
-) {
-	commands.set(name, { name, handler, desc });
+export function registerCommand(name: string, handler: CommandHandler, desc?: string) {
+  commands.set(name, { name, handler, desc });
 }
 
 export function unregisterCommand(name: string) {
-	commands.delete(name);
+  commands.delete(name);
 }
 
 export function get(name: string): CommandDefinition | undefined {
-	return commands.get(name);
+  return commands.get(name);
 }
 
 export function getAll(): CommandDefinition[] {
-	return Array.from(commands.values());
+  return Array.from(commands.values());
 }

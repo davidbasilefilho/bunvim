@@ -13,7 +13,6 @@
 		"jsxImportSource": "solid-js",
 		"types": ["bun"],
 		"lib": ["ESNext", "DOM"],
-		"baseUrl": ".",
 		"paths": {
 			"@bunvim/sdk": ["../sdk/src"],
 			"@bunvim/sdk/*": ["../sdk/src/*"]

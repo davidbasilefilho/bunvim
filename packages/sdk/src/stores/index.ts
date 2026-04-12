@@ -1,19 +1,9 @@
-export type {
-	BufferId,
-	BufferProps,
-	BufferState,
-	BufferType,
-} from "./bufferStore";
+export type { BufferId, BufferProps, BufferState, BufferType } from "./bufferStore";
 export * as bufferActions from "./bufferStore";
 export { bufferStore, setBufferStore } from "./bufferStore";
 export type { HoverPopupState, QuitDialogState } from "./editorUiStore";
 export * as editorUiActions from "./editorUiStore";
-export {
-	activePicker,
-	editorUiStore,
-	setActivePicker,
-	setEditorUiStore,
-} from "./editorUiStore";
+export { activePicker, editorUiStore, setActivePicker, setEditorUiStore } from "./editorUiStore";
 export { setSize, setTerminalState, terminalState } from "./terminalStore";
 export * as windowActions from "./windowStore";
 export { setWindowStore, windowStore } from "./windowStore";

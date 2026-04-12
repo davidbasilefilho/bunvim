@@ -7,14 +7,8 @@
 	},
 	"scripts": {
 		"build": "bun run ./build.ts",
-		"build:all": "bun run build:linux && bun run build:darwin && bun run build:windows",
-		"build:linux": "bun run ./build.ts -- linux",
-		"build:darwin": "bun run ./build.ts -- darwin",
-		"build:windows": "bun run ./build.ts -- windows",
+		"build:all": "bun run ./build.ts all",
 		"dev": "bun --watch ./src/index.tsx",
-		"lint": "biome lint --write .",
-		"format": "biome format --write .",
-		"check": "biome check --write .",
 		"test": "bun test",
 		"test:watch": "bun test --watch"
 	},
@@ -28,7 +22,6 @@
 	"devDependencies": {
 		"@babel/core": "^7.29.0",
 		"@babel/preset-typescript": "^7.28.5",
-		"@biomejs/biome": "latest",
 		"@types/bun": "^1.3.8",
 		"babel-preset-solid": "^1.9.10",
 		"typescript": "^5.7.3"
