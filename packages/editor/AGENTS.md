@@ -36,6 +36,7 @@ render(() => <App />, renderer);
 ### Component Patterns
 
 #### Basic Component
+
 ```typescript
 import { createSignal } from "solid-js";
 
@@ -51,6 +52,7 @@ function MyComponent(props: Props) {
 ```
 
 #### Accessing Stores
+
 ```typescript
 import { bufferStore, windowStore, editorUiStore } from "@bunvim/sdk";
 import { createMemo } from "solid-js";
@@ -171,17 +173,15 @@ bun run build:windows
 ### OpenTUI Solid Components
 
 #### Layout
+
 ```tsx
-<box 
-  flexDirection="column" 
-  flexGrow={1}
-  style={{ backgroundColor: "#1a1b26" }}
->
+<box flexDirection="column" flexGrow={1} style={{ backgroundColor: "#1a1b26" }}>
   <text fg="#c0caf5">Content</text>
 </box>
 ```
 
 #### Styling
+
 ```tsx
 <box
   style={{
@@ -190,30 +190,32 @@ bun run build:windows
     border: true,
     borderStyle: "single",
     borderColor: "#7aa2f7",
-  }}
->
-  <text fg="#c0caf5" bg="#3b4261">Styled text</text>
+  }}>
+  <text fg="#c0caf5" bg="#3b4261">
+    Styled text
+  </text>
 </box>
 ```
 
 #### Dynamic Component
+
 ```tsx
 import { Dynamic } from "@opentui/solid";
 
-<Dynamic component={isInput() ? "input" : "textarea"} />
+<Dynamic component={isInput() ? "input" : "textarea"} />;
 ```
 
 ### Migration from React
 
-| React | Solid |
-|-------|-------|
-| `useState` | `createSignal` |
-| `useEffect` | `createEffect` |
-| `useMemo` | `createMemo` |
-| `useCallback` | Not needed |
-| `Activity` | `Show` |
-| `.map()` | `<For>` |
-| `key` prop | Automatic |
+| React         | Solid          |
+| ------------- | -------------- |
+| `useState`    | `createSignal` |
+| `useEffect`   | `createEffect` |
+| `useMemo`     | `createMemo`   |
+| `useCallback` | Not needed     |
+| `Activity`    | `Show`         |
+| `.map()`      | `<For>`        |
+| `key` prop    | Automatic      |
 
 ### Coding Standards
 

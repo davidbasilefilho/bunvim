@@ -15,7 +15,6 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "jsx": "preserve",
-    "jsxImportSource": "solid-js",
     "types": ["bun"],
     "lib": ["ESNext", "DOM"]
   },

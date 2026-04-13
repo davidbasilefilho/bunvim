@@ -7,17 +7,23 @@
 	},
 	"scripts": {
 		"build": "bun run ./build.ts",
-		"build:all": "bun run ./build.ts all",
+		"build:all": "bun run build:linux && bun run build:darwin && bun run build:windows",
+		"build:linux": "bun run ./build.ts -- linux",
+		"build:darwin": "bun run ./build.ts -- darwin",
+		"build:windows": "bun run ./build.ts -- windows",
 		"dev": "bun --watch ./src/index.tsx",
+		"lint": "oxlint --fix --fix-suggestions",
+		"format": "oxfmt --write",
+		"check": "bun run --parallel lint format",
 		"test": "bun test",
 		"test:watch": "bun test --watch"
 	},
 	"dependencies": {
 		"@bunvim/sdk": "workspace:*",
-		"@opentui/core": "^0.1.77",
-		"@opentui/solid": "^0.1.77",
-		"solid-js": "^1.9.5",
-		"effect": "^3.19.16"
+		"@opentui/core": "0.1.77",
+		"@opentui/solid": "0.1.77",
+		"solid-js": "1.9.5",
+		"effect": "3.19.16"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.29.0",
@@ -27,8 +33,8 @@
 		"typescript": "^5.7.3"
 	},
 	"optionalDependencies": {
-		"@opentui/core-darwin-arm64": "^0.1.77",
-		"@opentui/core-linux-x64": "^0.1.77",
-		"@opentui/core-win32-x64": "^0.1.77"
+		"@opentui/core-darwin-arm64": "0.1.77",
+		"@opentui/core-linux-x64": "0.1.77",
+		"@opentui/core-win32-x64": "0.1.77"
 	}
 }

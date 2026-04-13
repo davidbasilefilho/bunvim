@@ -2,12 +2,16 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
   "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
     "test": {
       "dependsOn": ["^test"]
     },
-    "dev": {
-      "cache": true,
-      "persistent": true
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "bin/**"]
     }
   }
 }

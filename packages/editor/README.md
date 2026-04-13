@@ -5,6 +5,7 @@ The Bunvim terminal editor application built with SolidJS and OpenTUI.
 ## Overview
 
 This is the main editor application that provides:
+
 - **SolidJS-based UI** with fine-grained reactivity
 - **Vim-compatible editing** with modal interface
 - **Terminal-based UI** using OpenTUI components
@@ -43,7 +44,7 @@ import { useKeyboard } from "@opentui/solid";
 
 function EditorView() {
   const [count, setCount] = createSignal(0);
-  
+
   useKeyboard((key) => {
     if (key.name === "escape") {
       // Handle key

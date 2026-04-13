@@ -1,8 +1,13 @@
 import fs from "node:fs";
+
 import { bufferActions } from "@bunvim/sdk";
 import { createCliRenderer } from "@opentui/core";
 import { render } from "@opentui/solid";
+
 import { EditorView } from "./ui/editor-view";
+import { createLogger } from "./utils/logger";
+
+const logger = createLogger();
 
 const args = process.argv.slice(2);
 let initialFile: string | undefined;
@@ -60,7 +65,8 @@ process.on("SIGTERM", () => {
 	cleanupTerminal();
 	process.exit(0);
 });
-process.on("uncaughtException", () => {
+process.on("uncaughtException", (err) => {
+	logger.error("Uncaught Exception", err.stack);
 	cleanupTerminal();
 	process.exit(1);
 });
@@ -71,4 +77,12 @@ const renderer = await createCliRenderer({
 	exitOnCtrlC: false,
 });
 
-render(() => <EditorView initialFile={initialFile} />, renderer);
+try {
+	render(() => <EditorView initialFile={initialFile} />, renderer);
+} catch (err) {
+	const error = err instanceof Error ? err : new Error(String(err));
+	logger.error("Render failed", error.stack);
+	console.error(error);
+	cleanupTerminal();
+	process.exit(1);
+}

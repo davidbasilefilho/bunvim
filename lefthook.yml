@@ -1,5 +1,5 @@
 pre-commit:
   parallel: true
   commands:
-    check:
-      run: bun run check
+    fmt:
+      run: bun run fmt

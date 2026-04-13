@@ -122,6 +122,15 @@ Tests should cover basic behavior and edge cases. No minimum enforcement.
 
 Neovim experience in TypeScript. Same keybindings developers already know. Effect-TS in the SDK for type-safe side-effect management. Consumer packages (editor, plugins) choose their own async patterns. Bun for performance. Plugins as Bun projects for trivial authoring.
 
+### Package Architecture
+
+All reusable code, utilities, types, and APIs must live in the SDK package (`packages/sdk`). This includes state management, stores, core logic, effects, and shared utilities. The SDK is the foundation exported as `@bunvim/sdk` and serves multiple consumers:
+
+- **Editor** (`packages/editor`): Consumes SDK for UI rendering and keybinding handling.
+- **User Plugins**: External plugins import and extend SDK functionality.
+
+Never duplicate reusable logic across packages. If editor-specific features are needed, extend rather than duplicate. Keep the SDK lean, focused, and portable for third-party plugin authors.
+
 ### Visual Language
 
 Brutalist aesthetic. No border radius. Element separation via background color contrast. Sharp edges. Functional over decorative.

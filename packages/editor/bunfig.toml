@@ -1,5 +1,8 @@
-[build]
-jsx = "preserve"
-jsxImportSource = "@opentui/solid"
+preload = ["@opentui/solid/preload"]
 
+[build]
+jsx = "solid-js"
+jsxImportSource = "solid-js"
+
+[test]
 preload = ["@opentui/solid/preload"]

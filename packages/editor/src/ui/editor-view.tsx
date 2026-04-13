@@ -14,11 +14,13 @@ import {
 	processKey,
 	setActivePicker,
 	setSize,
+	useTextInput,
 	windowActions,
 	windowStore,
 } from "@bunvim/sdk";
 import { useKeyboard, useTerminalDimensions } from "@opentui/solid";
 import { createMemo, createSignal, For, onMount, Show } from "solid-js";
+
 import { registerDefaultKeymaps } from "../keymaps";
 import { ClueMenu } from "./clue-menu";
 import { Dashboard, type DashboardKeyHandler } from "./dashboard";
@@ -314,7 +316,60 @@ export function EditorView(_props: EditorViewProps) {
 		}
 	};
 
+	const handleBackspace = () => {
+		const win = activeWindow();
+		const buf = activeBuffer();
+		if (win && buf && (win.cursor.column > 0 || win.cursor.line > 0)) {
+			const curLine = win.cursor.line;
+			const curCol = win.cursor.column;
+
+			let startLine: number;
+			let startCol: number;
+
+			if (curCol > 0) {
+				startLine = curLine;
+				startCol = curCol - 1;
+			} else {
+				const prevLine = bufferActions.getLine(buf, curLine - 1);
+				startLine = curLine - 1;
+				startCol = prevLine?.length ?? 0;
+			}
+
+			const deleteRange = {
+				start: { line: startLine, column: startCol },
+				end: { line: curLine, column: curCol },
+			};
+
+			const newBuffer = bufferActions.deleteInRange(buf, deleteRange);
+			if (newBuffer) {
+				bufferActions.updateBufferState(buf.id, () => newBuffer);
+				windowActions.setCursor(win.id, startLine, startCol);
+			}
+		}
+	};
+
+	const textInput = useTextInput({
+		onChar: (char) => insertChar(char),
+		onBackspace: () => handleBackspace(),
+		onEnter: () => insertChar("\n"),
+		onEscape: () => {
+			handleKeyResult({ type: "mode-change", mode: normal() });
+			const win = activeWindow();
+			if (win && win.cursor.column > 0) {
+				windowActions.setCursor(win.id, win.cursor.line, win.cursor.column - 1);
+			}
+		},
+		enabled: () => editorUiStore.mode.type === "insert",
+	});
+
 	useKeyboard((key) => {
+		// Direct test - write to a file to see if keyboard is working
+		try {
+			const fs = require("node:fs");
+			fs.appendFileSync("C:/Users/basile/dev/bunvim/bin/keytest.txt", 
+				`key: ${key.name}, home: ${editorUiStore.isHomeBuffer}, mode: ${editorUiStore.mode.type}\n`);
+		} catch {}
+
 		if (activePicker()) return;
 
 		if (
@@ -343,61 +398,8 @@ export function EditorView(_props: EditorViewProps) {
 		};
 
 		if (editorUiStore.mode.type === "insert") {
-			if (
-				key.name === "escape" ||
-				key.sequence === "\x1b" ||
-				(key.ctrl && key.name === "c")
-			) {
-				handleKeyResult({ type: "mode-change", mode: normal() });
-				const win = activeWindow();
-				if (win && win.cursor.column > 0) {
-					windowActions.setCursor(
-						win.id,
-						win.cursor.line,
-						win.cursor.column - 1,
-					);
-				}
-			} else if (key.name === "backspace") {
-				const win = activeWindow();
-				const buf = activeBuffer();
-				if (win && buf && (win.cursor.column > 0 || win.cursor.line > 0)) {
-					const curLine = win.cursor.line;
-					const curCol = win.cursor.column;
-
-					let startLine: number;
-					let startCol: number;
-
-					if (curCol > 0) {
-						startLine = curLine;
-						startCol = curCol - 1;
-					} else {
-						const prevLine = bufferActions.getLine(buf, curLine - 1);
-						startLine = curLine - 1;
-						startCol = prevLine?.length ?? 0;
-					}
-
-					const deleteRange = {
-						start: { line: startLine, column: startCol },
-						end: { line: curLine, column: curCol },
-					};
-
-					const newBuffer = bufferActions.deleteInRange(buf, deleteRange);
-					if (newBuffer) {
-						bufferActions.updateBufferState(buf.id, () => newBuffer);
-						windowActions.setCursor(win.id, startLine, startCol);
-					}
-				}
-			} else if (key.name === "return") {
-				insertChar("\n");
-			} else if (
-				key.sequence &&
-				key.sequence.length === 1 &&
-				!key.ctrl &&
-				!key.meta
-			) {
-				insertChar(key.sequence);
-			}
-			return;
+			const handled = textInput.handleKey(keyEvent);
+			if (handled) return;
 		}
 
 		const { result, newState } = processKey({
@@ -462,12 +464,14 @@ export function EditorView(_props: EditorViewProps) {
 			<Show
 				when={!editorUiStore.isHomeBuffer}
 				fallback={
-					<Dashboard
-						onAction={handleDashboardAction}
-						onReady={(handler) => {
-							dashboardKeyHandler = handler;
-						}}
-					/>
+					<box flexGrow={1}>
+						<Dashboard
+							onAction={handleDashboardAction}
+							onReady={(handler) => {
+								dashboardKeyHandler = handler;
+							}}
+						/>
+					</box>
 				}
 			>
 				<box flexGrow={1} flexDirection="column" style={{ padding: 0 }}>
@@ -485,15 +489,41 @@ export function EditorView(_props: EditorViewProps) {
 			/>
 
 			<Show when={editorUiStore.mode.type === "command"}>
-				<InputPopup label="COMMAND" value={editorUiStore.mode.input} icon=":" />
+				<box>
+					<InputPopup
+						label="COMMAND"
+						value={editorUiStore.mode.input}
+						icon=":"
+						useNativeInput
+						onInput={(val) =>
+							editorUiActions.setMode({
+								...editorUiStore.mode,
+								input: val,
+							})
+						}
+						onSubmit={() => executeCommand(editorUiStore.mode.input)}
+						onCancel={() => editorUiActions.setMode(normal())}
+					/>
+				</box>
 			</Show>
 
 			<Show when={editorUiStore.mode.type === "search"}>
-				<InputPopup
-					label="SEARCH"
-					value={editorUiStore.mode.input}
-					icon={editorUiStore.mode.direction === "forward" ? "/" : "?"}
-				/>
+				<box>
+					<InputPopup
+						label="SEARCH"
+						value={editorUiStore.mode.input}
+						icon={editorUiStore.mode.direction === "forward" ? "/" : "?"}
+						useNativeInput
+						onInput={(val) =>
+							editorUiActions.setMode({
+								...editorUiStore.mode,
+								input: val,
+							})
+						}
+						onSubmit={() => editorUiActions.setMode(normal())}
+						onCancel={() => editorUiActions.setMode(normal())}
+					/>
+				</box>
 			</Show>
 
 			<ClueMenu />

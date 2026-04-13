@@ -1,28 +1,38 @@
 [tools]
 bun = "latest"
-node = "latest"
-"npm:oxlint" = "latest"
 zig = "latest"
-"npm:oxfmt" = "latest"
-"npm:oxlint-tsgolint" = "latest"
+
+[settings]
 
 [settings.npm]
 package_manager = "bun"
 
-[env]
-_.path = "./.mise/bin"
+[tasks.start]
+run = "cd packages/editor && bun src/index.tsx"
+
+[tasks.dev]
+run = "cd packages/editor && bun --hot src/index.tsx"
 
 [tasks.build]
-run = "cd packages/sdk && bun run build && cd ../editor && bun run build"
+run = "bun run build.ts --target current"
 
-[tasks.build-all]
-run = "cd packages/sdk && bun run build && cd ../editor && bun run build:all"
+[tasks."build:all"]
+run = "bun run build.ts --target all"
 
-[tasks.build-linux]
-run = "cd packages/sdk && bun run build && cd ../editor && bun run src/build.ts linux"
+[tasks."build:linux"]
+run = "bun run build.ts --target linux-x64"
 
-[tasks.build-darwin]
-run = "cd packages/sdk && bun run build && cd ../editor && bun run src/build.ts darwin"
+[tasks."build:linux-baseline"]
+run = "bun run build.ts --target linux-x64-baseline"
 
-[tasks.build-windows]
-run = "cd packages/sdk && bun run build && cd ../editor && bun run src/build.ts windows"
+[tasks."build:darwin"]
+run = "bun run build.ts --target darwin-x64"
+
+[tasks."build:darwin-baseline"]
+run = "bun run build.ts --target darwin-x64-baseline"
+
+[tasks."build:windows"]
+run = "bun run build.ts --target windows-x64"
+
+[tasks."build:windows-baseline"]
+run = "bun run build.ts --target windows-x64-baseline"
