@@ -22,7 +22,7 @@
     "@bunvim/sdk": "workspace:*",
     "@opentui/core": "0.1.99",
     "@opentui/solid": "0.1.99",
-    "effect": "3.19.16",
+    "effect": "3.20.0",
     "solid-js": "1.9.11"
   },
   "devDependencies": {
