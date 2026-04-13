@@ -1,18 +1,18 @@
 {
-	"compilerOptions": {
-		"target": "ESNext",
-		"module": "ESNext",
-		"moduleResolution": "bundler",
-		"strict": true,
-		"esModuleInterop": true,
-		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true,
-		"resolveJsonModule": true,
-		"allowSyntheticDefaultImports": true,
-		"jsx": "preserve",
-		"jsxImportSource": "@opentui/solid",
-		"types": ["bun"],
-		"lib": ["ESNext", "DOM"]
-	},
-	"include": ["packages/editor/src/**/*"]
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "jsx": "preserve",
+    "jsxImportSource": "@opentui/solid",
+    "types": ["bun"],
+    "lib": ["ESNext", "DOM"]
+  },
+  "include": ["packages/editor/src/**/*"]
 }
