@@ -1,5 +1,6 @@
 import { Effect, pipe } from "effect";
 
+import { getAll as getAllCommands } from "../api/command";
 import { getListedBuffers } from "../stores/bufferStore";
 import { runCommand } from "../utils/shell";
 import type { PickerItem, PickerSource } from "./source";
@@ -91,5 +92,10 @@ export const grepSource = (file?: string): PickerSource => ({
 export const commandSource: PickerSource = {
   name: "Commands",
   getItems: (_query: string) =>
-    Effect.succeed([{ text: "q" }, { text: "w" }, { text: "wq" }, { text: "help" }]),
+    Effect.succeed(
+      getAllCommands().map((cmd) => ({
+        text: cmd.name,
+        data: { command: cmd.name },
+      })),
+    ),
 };

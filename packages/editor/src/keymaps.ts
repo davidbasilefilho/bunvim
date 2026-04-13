@@ -90,7 +90,7 @@ export function registerDefaultKeymaps() {
 
   registerKeymap({
     lhs: "<Esc>",
-    mode: ["i", "v", "c"],
+    mode: ["i", "v", "c", "s"],
     description: "Exit to normal mode",
     rhs: () => {
       editorUiActions.setMode(normal());

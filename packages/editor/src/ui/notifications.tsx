@@ -26,7 +26,8 @@ export function Notifications() {
       top={2}
       width={40}
       flexDirection="column"
-      alignItems="flex-end">
+      alignItems="flex-end"
+      style={{ zIndex: 50 }}>
       <For each={notificationStore.notifications}>
         {(n) => (
           <box

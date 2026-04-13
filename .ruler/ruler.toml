@@ -2,7 +2,16 @@
 # See https://ai.intellectronica.net/ruler for documentation.
 
 # Default agents when --agents is not specified
-default_agents = ["claude", "zed", "gemini", "antigravity", "copilot", "agents", "opencode"]
+default_agents = [
+  "claude",
+  "zed",
+  "gemini",
+  "antigravity",
+  "copilot",
+  "agents",
+  "opencode",
+  "agent",
+]
 
 # Enable skills support (experimental)
 [skills]

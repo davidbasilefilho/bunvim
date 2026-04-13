@@ -140,6 +140,7 @@ Brutalist aesthetic. No border radius. Element separation via background color c
 **Constraints:**
 
 - Use `bun` exclusively. Never `npm`, `npx`, or `tsc`. Bun handles package management, execution, and TypeScript without compilation.
+- Always use ESM. Every module file must use ESM syntax (`export`/`import`). Never use `require()`, `module.exports`, or CommonJS patterns.
 - Avoid comments, unless JSDoc comments. Reduce the usage of JSX comments, though they are allowed if used moderately. Use JSDoc in exposed code.
 
 **Type Safety Rules:**

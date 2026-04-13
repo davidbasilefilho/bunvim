@@ -93,7 +93,7 @@ const modeToShortName = (mode: EditorMode): string => {
     case "command":
       return "c";
     case "search":
-      return "c";
+      return "s";
     case "operator-pending":
       return "o";
     default:

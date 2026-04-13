@@ -1,6 +1,5 @@
 import type { KeyEvent, KeySequenceState } from "@bunvim/sdk";
 import {
-  activePicker,
   bufferActions,
   bufferSource,
   bufferStore,
@@ -18,13 +17,14 @@ import {
   windowActions,
   windowStore,
 } from "@bunvim/sdk";
-import { useKeyboard, useTerminalDimensions } from "@opentui/solid";
+import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid";
 import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 
 import { registerDefaultKeymaps } from "../keymaps";
-import { ClueMenu } from "./clue-menu";
 import { Dashboard, type DashboardKeyHandler } from "./dashboard";
 import { InputPopup } from "./input-popup";
+import { Notifications } from "./notifications";
+import { handlePickerKey, Picker } from "./picker";
 import { Statusline } from "./statusline";
 
 interface EditorViewProps {
@@ -45,7 +45,7 @@ export function EditorView(_props: EditorViewProps) {
     registerDefaultKeymaps();
 
     const existingBuffers = bufferStore.buffers;
-    let bufId: string;
+    let bufId: number;
 
     if (existingBuffers.length > 0 && existingBuffers[0]) {
       bufId = existingBuffers[0].id;
@@ -130,13 +130,39 @@ export function EditorView(_props: EditorViewProps) {
         break;
       }
       case "find-file":
-        setActivePicker(filesSource);
+        setActivePicker({
+          ...filesSource,
+          onSelect: (item) => {
+            const data = item.data as { file: string } | undefined;
+            if (data?.file) void openFile(data.file);
+          },
+        });
         break;
       case "grep":
-        setActivePicker(grepSource());
+        setActivePicker({
+          ...grepSource(),
+          onSelect: (item) => {
+            const data = item.data as { file: string; line: number } | undefined;
+            if (data?.file) {
+              void openFile(data.file).then(() => {
+                const win = windowStore.windows.find((w) => w.id === windowStore.activeWindowId);
+                if (win) windowActions.setCursor(win.id, data.line - 1, (data.col ?? 1) - 1);
+              });
+            }
+          },
+        });
         break;
       case "recent":
-        setActivePicker(bufferSource);
+        setActivePicker({
+          ...bufferSource,
+          onSelect: (item) => {
+            const data = item.data as { bufId: number } | undefined;
+            if (data?.bufId !== undefined) {
+              const win = windowStore.windows.find((w) => w.id === windowStore.activeWindowId);
+              if (win) windowActions.setBuffer(win.id, data.bufId);
+            }
+          },
+        });
         break;
       case "quit":
         process.exit(0);
@@ -211,7 +237,7 @@ export function EditorView(_props: EditorViewProps) {
     // :w - save current buffer
     if (trimmed === "w" || trimmed === "write") {
       const buf = activeBuffer();
-      saveBuffer(buf);
+      void saveBuffer(buf);
       editorUiActions.setMode(normal());
       return;
     }
@@ -219,7 +245,7 @@ export function EditorView(_props: EditorViewProps) {
     // :wq - save and quit
     if (trimmed === "wq" || trimmed === "x") {
       const buf = activeBuffer();
-      saveBuffer(buf).then(() => {
+      void saveBuffer(buf).then(() => {
         process.exit(0);
       });
       return;
@@ -255,7 +281,7 @@ export function EditorView(_props: EditorViewProps) {
 
     // :wqa / :wqa! - save all and quit
     if (trimmed === "wqa" || trimmed === "wqa!" || trimmed === "xa" || trimmed === "xa!") {
-      saveAllBuffers().then(() => {
+      void saveAllBuffers().then(() => {
         process.exit(0);
       });
       return;
@@ -264,7 +290,7 @@ export function EditorView(_props: EditorViewProps) {
     // :e <file> - open file
     if (trimmed.startsWith("e ")) {
       const filePath = trimmed.slice(2).trim();
-      openFile(filePath);
+      void openFile(filePath);
       return;
     }
 
@@ -349,16 +375,13 @@ export function EditorView(_props: EditorViewProps) {
   });
 
   useKeyboard((key) => {
-    // Direct test - write to a file to see if keyboard is working
-    try {
-      const fs = require("node:fs");
-      fs.appendFileSync(
-        "C:/Users/basile/dev/bunvim/bin/keytest.txt",
-        `key: ${key.name}, home: ${editorUiStore.isHomeBuffer}, mode: ${editorUiStore.mode.type}\n`,
-      );
-    } catch {}
+    if (handlePickerKey(key)) return;
 
-    if (activePicker()) return;
+    if (key.ctrl && key.name === "c") {
+      const renderer = useRenderer();
+      renderer.destroy();
+      return;
+    }
 
     if (editorUiStore.isHomeBuffer && editorUiStore.mode.type === "normal" && dashboardKeyHandler) {
       const handled = dashboardKeyHandler({
@@ -400,7 +423,6 @@ export function EditorView(_props: EditorViewProps) {
     if (result.type === "pending") {
       const pendingDisplay = [newState.count, ...newState.keys].join("");
       editorUiActions.setPendingKeys(pendingDisplay);
-      editorUiActions.setClueScrollTop(0);
     } else {
       handleKeyResult(result);
     }
@@ -438,7 +460,7 @@ export function EditorView(_props: EditorViewProps) {
   };
 
   return (
-    <box flexDirection="column" flexGrow={1}>
+    <box focusable focused flexDirection="column" flexGrow={1}>
       <Show
         when={!editorUiStore.isHomeBuffer}
         fallback={
@@ -466,18 +488,11 @@ export function EditorView(_props: EditorViewProps) {
       />
 
       <Show when={editorUiStore.mode.type === "command"}>
-        <box>
+        <box position="absolute" left="25%" top="35%" width="50%" style={{ zIndex: 10 }}>
           <InputPopup
             label="COMMAND"
             value={editorUiStore.mode.input}
             icon=":"
-            useNativeInput
-            onInput={(val) =>
-              editorUiActions.setMode({
-                ...editorUiStore.mode,
-                input: val,
-              })
-            }
             onSubmit={() => executeCommand(editorUiStore.mode.input)}
             onCancel={() => editorUiActions.setMode(normal())}
           />
@@ -485,25 +500,19 @@ export function EditorView(_props: EditorViewProps) {
       </Show>
 
       <Show when={editorUiStore.mode.type === "search"}>
-        <box>
+        <box position="absolute" left="25%" top="35%" width="50%" style={{ zIndex: 10 }}>
           <InputPopup
             label="SEARCH"
             value={editorUiStore.mode.input}
             icon={editorUiStore.mode.direction === "forward" ? "/" : "?"}
-            useNativeInput
-            onInput={(val) =>
-              editorUiActions.setMode({
-                ...editorUiStore.mode,
-                input: val,
-              })
-            }
             onSubmit={() => editorUiActions.setMode(normal())}
             onCancel={() => editorUiActions.setMode(normal())}
           />
         </box>
       </Show>
 
-      <ClueMenu />
+      <Notifications />
+      <Picker />
     </box>
   );
 }

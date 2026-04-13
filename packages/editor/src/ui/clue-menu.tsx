@@ -31,6 +31,7 @@ export function ClueMenu() {
             borderStyle: "single",
             borderColor: colors().surface,
             padding: 1,
+            zIndex: 5,
           }}>
           <box flexDirection="column">
             <For each={matchingKeys()}>

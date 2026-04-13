@@ -50,6 +50,7 @@ yarn-error.log*
 /.mcp.json
 /.mcp.json.bak
 /.opencode/skills
+/.pi/skills
 /.vscode/mcp.json
 /.vscode/mcp.json.bak
 /.zed/settings.json

@@ -8,4 +8,5 @@ export type PickerItem = {
 export interface PickerSource {
   name: string;
   getItems: (query: string) => Effect.Effect<PickerItem[], never, never>;
+  onSelect?: (item: PickerItem) => void;
 }

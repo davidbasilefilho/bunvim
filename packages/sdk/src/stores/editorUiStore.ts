@@ -20,7 +20,6 @@ export interface HoverPopupState {
 interface EditorUiStoreState {
   mode: EditorMode;
   pendingKeys: string;
-  clueScrollTop: number;
   visualAnchorLine: number;
   visualAnchorColumn: number;
   yankRegister: string;
@@ -37,7 +36,6 @@ interface EditorUiStoreState {
 const [editorUiStore, setEditorUiStore] = createStore<EditorUiStoreState>({
   mode: { type: "normal" },
   pendingKeys: "",
-  clueScrollTop: 0,
   visualAnchorLine: 0,
   visualAnchorColumn: 0,
   yankRegister: "",
@@ -75,10 +73,7 @@ export function setYankRegister(text: string): void {
 }
 
 export function setHighlights(bufferId: number, highlights: HighlightRange[]): void {
-  setEditorUiStore("highlights", (h) => ({
-    ...h,
-    [bufferId]: highlights,
-  }));
+  setEditorUiStore("highlights", bufferId, highlights);
 }
 
 export function setIsHomeBuffer(isHome: boolean): void {
@@ -103,10 +98,6 @@ export function showHoverPopup(contents: string, line: number, column: number): 
 
 export function closeHoverPopup(): void {
   setEditorUiStore("hoverPopup", undefined);
-}
-
-export function setClueScrollTop(scrollTop: number): void {
-  setEditorUiStore("clueScrollTop", scrollTop);
 }
 
 export { editorUiStore, setEditorUiStore, activePicker, setActivePicker };

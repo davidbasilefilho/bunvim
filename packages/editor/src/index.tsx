@@ -59,7 +59,10 @@ function cleanupTerminal() {
   } catch {}
 }
 
-process.on("SIGINT", () => {});
+process.on("SIGINT", () => {
+  cleanupTerminal();
+  process.exit(0);
+});
 process.on("exit", cleanupTerminal);
 process.on("SIGTERM", () => {
   cleanupTerminal();
@@ -75,10 +78,11 @@ const renderer = await createCliRenderer({
   useMouse: true,
   enableMouseMovement: true,
   exitOnCtrlC: false,
+  useKittyKeyboard: { disambiguate: true, alternateKeys: false, events: false },
 });
 
 try {
-  render(() => <EditorView initialFile={initialFile} />, renderer);
+  void render(() => <EditorView initialFile={initialFile} />, renderer);
 } catch (err) {
   const error = err instanceof Error ? err : new Error(String(err));
   logger.error("Render failed", error.stack);

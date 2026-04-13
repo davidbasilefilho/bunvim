@@ -18,6 +18,9 @@
     "ruler:revert": "ruler revert",
     "postinstall": "bun run scripts/patch-opentui.ts"
   },
+  "dependencies": {
+    "@opentui/core-win32-x64": "0.1.77"
+  },
   "devDependencies": {
     "@intellectronica/ruler": "^0.3.38",
     "lefthook": "^2.1.5",
