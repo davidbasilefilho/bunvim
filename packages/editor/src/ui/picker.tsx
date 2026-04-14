@@ -1,7 +1,8 @@
 import { activePicker, editorUiActions, fuzzyMatch, getColors, setActivePicker } from "@bunvim/sdk";
 import type { PickerItem, PickerSource } from "@bunvim/sdk";
-import { Effect } from "effect";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+
+import { InputPopup } from "./input-popup";
 
 const VISIBLE_LINES = 12;
 
@@ -20,32 +21,35 @@ const filteredPickerItems = createMemo(() => {
     .map((entry) => entry.item);
 });
 
-function loadPickerItems(src: PickerSource) {
+let pickerLoadToken = 0;
+
+async function loadPickerItems(src: PickerSource, query: string) {
+  const token = ++pickerLoadToken;
   setPickerLoading(true);
-  const program = src.getItems(pickerQuery());
-  Effect.runFork(
-    Effect.gen(function* () {
-      const result = yield* program;
-      setPickerItems(result);
-      setPickerSelectedIndex(0);
-      setPickerLoading(false);
-    }),
-  );
+  try {
+    const result = await src.getItems(query);
+    if (token !== pickerLoadToken) return;
+    setPickerItems(result);
+    setPickerSelectedIndex(0);
+  } finally {
+    if (token === pickerLoadToken) setPickerLoading(false);
+  }
 }
 
-function refreshPickerItems() {
+function selectPickerItem() {
+  const visible = filteredPickerItems();
+  const idx = pickerSelectedIndex();
   const src = activePicker();
-  if (!src) return;
-  setPickerLoading(true);
-  const program = src.getItems(pickerQuery());
-  Effect.runFork(
-    Effect.gen(function* () {
-      const result = yield* program;
-      setPickerItems(result);
-      setPickerSelectedIndex(0);
-      setPickerLoading(false);
-    }),
-  );
+  if (src && visible[idx]) {
+    src.onSelect?.(visible[idx]);
+  }
+  setActivePicker(undefined);
+  editorUiActions.setMode({ type: "normal" });
+}
+
+function closePicker() {
+  setActivePicker(undefined);
+  editorUiActions.setMode({ type: "normal" });
 }
 
 createEffect(() => {
@@ -54,8 +58,14 @@ createEffect(() => {
     setPickerQuery("");
     setPickerItems([]);
     setPickerSelectedIndex(0);
-    loadPickerItems(src);
   }
+});
+
+createEffect(() => {
+  const src = activePicker();
+  const query = pickerQuery();
+  if (!src) return;
+  void loadPickerItems(src, query);
 });
 
 export function handlePickerKey(key: {
@@ -67,21 +77,13 @@ export function handlePickerKey(key: {
 }): boolean {
   if (!activePicker()) return false;
 
-  if (key.name === "escape" || (key.ctrl && key.name === "c")) {
-    setActivePicker(undefined);
-    editorUiActions.setMode({ type: "normal" });
+  if (key.ctrl && key.name === "c") {
+    closePicker();
     return true;
   }
 
-  if (key.name === "return" || key.name === "enter") {
-    const visible = filteredPickerItems();
-    const idx = pickerSelectedIndex();
-    const src = activePicker();
-    if (src && visible[idx]) {
-      src.onSelect?.(visible[idx]);
-    }
-    setActivePicker(undefined);
-    editorUiActions.setMode({ type: "normal" });
+  if (key.name === "escape") {
+    closePicker();
     return true;
   }
 
@@ -91,29 +93,11 @@ export function handlePickerKey(key: {
   }
 
   if (key.name === "down" || key.name === "j") {
-    setPickerSelectedIndex((i) => Math.min(filteredPickerItems().length - 1, i + 1));
+    setPickerSelectedIndex((i) => Math.min(Math.max(0, filteredPickerItems().length - 1), i + 1));
     return true;
   }
 
-  if (key.name === "backspace") {
-    const q = pickerQuery();
-    if (q.length > 0) {
-      setPickerQuery(q.slice(0, -1));
-      refreshPickerItems();
-    } else {
-      setActivePicker(undefined);
-      editorUiActions.setMode({ type: "normal" });
-    }
-    return true;
-  }
-
-  if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta) {
-    setPickerQuery((q) => q + key.sequence!);
-    refreshPickerItems();
-    return true;
-  }
-
-  return true;
+  return false;
 }
 
 export function Picker() {
@@ -129,18 +113,19 @@ export function Picker() {
         style={{
           backgroundColor: colors().overlay,
           border: true,
-          borderColor: colors().accent,
+          borderColor: colors().cursor,
           zIndex: 100,
         }}
         flexDirection="column">
-        <box flexDirection="row" style={{ height: 1, paddingLeft: 1, paddingRight: 1 }}>
-          <text fg={colors().accent} bold>
-            {activePicker()?.name ?? "Picker"}
-          </text>
-          <text fg={colors().muted}> &gt; </text>
-          <text fg={colors().fg}>{pickerQuery()}</text>
-          <text fg={colors().cursor}>|</text>
-        </box>
+        <InputPopup
+          inline
+          label={activePicker()?.name ?? "Picker"}
+          value={pickerQuery()}
+          useNativeInput
+          onInput={(value) => setPickerQuery(value)}
+          onSubmit={selectPickerItem}
+          onCancel={closePicker}
+        />
 
         <box flexDirection="column" flexGrow={1} style={{ paddingLeft: 1, paddingRight: 1 }}>
           <Show when={!pickerLoading()} fallback={<text fg={colors().muted}>Loading...</text>}>
@@ -154,7 +139,7 @@ export function Picker() {
                       height: 1,
                       backgroundColor: isSelected() ? colors().surface : undefined,
                     }}>
-                    <text fg={isSelected() ? colors().accent : colors().fg}>{item.text}</text>
+                    <text fg={isSelected() ? colors().cursor : colors().fg}>{item.text}</text>
                   </box>
                 );
               }}

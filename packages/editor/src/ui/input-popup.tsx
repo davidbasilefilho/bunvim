@@ -5,6 +5,7 @@ interface InputPopupProps {
   label: string;
   value: string;
   icon?: string;
+  inline?: boolean;
   /** Use native OpenTUI input component */
   useNativeInput?: boolean;
   /** Called when input value changes */
@@ -17,8 +18,8 @@ interface InputPopupProps {
 
 export function InputPopup(props: InputPopupProps) {
   const showIcon = opt.nerdFont;
-  const displayIcon = showIcon ? (props.icon === "/" ? "" : ":") : "";
-  const displayLabel = showIcon ? "" : props.label === "COMMAND" ? "CMD" : props.label;
+  const displayPrefix = props.label === "COMMAND" ? "CMD" : props.label;
+  const prefixWidth = displayPrefix.length + 1;
   const colors = {
     accent: "#7aa2f7",
     label: "#e0af68",
@@ -26,15 +27,16 @@ export function InputPopup(props: InputPopupProps) {
     bg: "#24283b",
   };
 
-  return (
+  const content = (
     <box
-      position="absolute"
-      left="25%"
-      top="35%"
-      width="50%"
-      height={5}
       flexDirection="row"
-      alignItems="center">
+      alignItems="center"
+      style={{
+        height: 3,
+        backgroundColor: colors.bg,
+        paddingLeft: 2,
+        paddingRight: 2,
+      }}>
       <box
         style={{
           width: 1,
@@ -43,26 +45,10 @@ export function InputPopup(props: InputPopupProps) {
           backgroundColor: colors.accent,
         }}
       />
-      <box
-        flexDirection="row"
-        flexGrow={1}
-        alignItems="center"
-        justifyContent="flex-start"
-        style={{
-          height: 3,
-          backgroundColor: colors.bg,
-          paddingLeft: 2,
-          paddingRight: 2,
-        }}>
-        {showIcon ? (
-          <text fg={colors.accent} style={{ marginRight: 1 }}>
-            {displayIcon}
-          </text>
-        ) : (
-          <text fg={colors.label} style={{ marginRight: 1 }}>
-            {displayLabel}
-          </text>
-        )}
+      <box flexDirection="row" alignItems="center" flexGrow={1}>
+        <box width={prefixWidth} style={{ marginRight: 1 }}>
+          <text fg={showIcon ? colors.accent : colors.label}>{displayPrefix}</text>
+        </box>
 
         <Show
           when={props.useNativeInput}
@@ -72,19 +58,38 @@ export function InputPopup(props: InputPopupProps) {
               <text fg={colors.accent}>|</text>
             </box>
           }>
-          <input
-            value={props.value}
-            onInput={(val) => props.onInput?.(val)}
-            onSubmit={() => props.onSubmit?.()}
-            onCancel={() => props.onCancel?.()}
-            focused
-            width="100%"
-            backgroundColor={colors.bg}
-            textColor={colors.fg}
-            cursorColor={colors.accent}
-          />
+          <box flexGrow={1}>
+            <input
+              value={props.value}
+              onInput={(val) => props.onInput?.(val)}
+              onSubmit={() => props.onSubmit?.()}
+              focused
+              width="100%"
+              backgroundColor={colors.bg}
+              textColor={colors.fg}
+              cursorColor={colors.accent}
+            />
+          </box>
         </Show>
       </box>
+    </box>
+  );
+
+  if (props.inline) {
+    return content;
+  }
+
+  return (
+    <box
+      position="absolute"
+      left="25%"
+      top="35%"
+      width="50%"
+      height={5}
+      flexDirection="row"
+      alignItems="center"
+      style={{ zIndex: 100 }}>
+      {content}
     </box>
   );
 }

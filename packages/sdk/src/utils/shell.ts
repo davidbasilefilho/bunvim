@@ -1,9 +1,25 @@
 import { $ } from "bun";
+import { join, delimiter } from "node:path";
 import { Data, Effect } from "effect";
 
 export class ShellError extends Data.TaggedError("ShellError")<{
   message: string;
 }> {}
+
+const buildEnv = (options?: { env?: Record<string, string> }) => {
+  const env = { ...process.env, ...options?.env };
+  if (process.platform !== "win32") return env;
+
+  const userProfile = process.env.USERPROFILE;
+  if (userProfile) {
+    const scoopShims = join(userProfile, "scoop", "shims");
+    const currentPath = env.PATH ?? env.Path ?? "";
+    env.PATH = currentPath ? `${scoopShims}${delimiter}${currentPath}` : scoopShims;
+    env.Path = env.PATH;
+  }
+
+  return env;
+};
 
 export function runCommand(
   command: string,
@@ -15,7 +31,7 @@ export function runCommand(
     try: () =>
       $`sh -c ${command}`
         .cwd(options?.cwd ?? process.cwd())
-        .env({ ...process.env, ...options?.env })
+        .env(buildEnv(options))
         .text(),
     catch: (e) => new ShellError({ message: String(e) }),
   });

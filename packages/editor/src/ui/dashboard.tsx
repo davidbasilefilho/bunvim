@@ -12,6 +12,7 @@ const DASHBOARD_ACTIONS: DashboardAction[] = [
   { label: "Find File", shortcut: "f", id: "find-file" },
   { label: "Grep", shortcut: "g", id: "grep" },
   { label: "Recent Files", shortcut: "r", id: "recent" },
+  { label: "Commands", shortcut: "c", id: "commands" },
   { label: "Quit", shortcut: "q", id: "quit" },
 ];
 
@@ -28,6 +29,15 @@ export function Dashboard(props: DashboardProps) {
   const [selectedIndex, setSelectedIndex] = createSignal(0);
 
   const handleDashboardKey: DashboardKeyHandler = (key) => {
+    const typed =
+      key.sequence?.length === 1
+        ? key.sequence
+        : key.name === "space"
+          ? " "
+          : key.name && key.name.length === 1
+            ? key.name
+            : undefined;
+
     if (key.name === "j" || key.name === "down") {
       setSelectedIndex((i) => Math.min(i + 1, DASHBOARD_ACTIONS.length - 1));
       return true;
@@ -42,9 +52,8 @@ export function Dashboard(props: DashboardProps) {
       return true;
     }
 
-    const seq = key.sequence;
-    if (seq && seq.length === 1) {
-      const match = DASHBOARD_ACTIONS.find((a) => a.shortcut === seq);
+    if (typed) {
+      const match = DASHBOARD_ACTIONS.find((a) => a.shortcut === typed);
       if (match) {
         props.onAction(match.id);
         return true;

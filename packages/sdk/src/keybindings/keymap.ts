@@ -240,6 +240,13 @@ export const processKey = (
   return { result: { type: "unhandled" }, newState: clearState(state) };
 };
 
+const getPrintableKey = (key: KeyEvent): string | undefined => {
+  if (key.ctrl || key.meta) return undefined;
+  if (key.sequence && key.sequence.length === 1) return key.sequence;
+  if (key.key.length === 1) return key.key;
+  return undefined;
+};
+
 const processCommandMode = (
   state: KeySequenceState,
   key: KeyEvent,
@@ -272,9 +279,10 @@ const processCommandMode = (
     };
   }
 
-  if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta) {
+  const printableKey = getPrintableKey(key);
+  if (printableKey) {
     return {
-      result: { type: "command-update", input: currentInput + key.sequence },
+      result: { type: "command-update", input: currentInput + printableKey },
       newState: state,
     };
   }

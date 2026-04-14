@@ -1,5 +1,3 @@
-import type { Effect } from "effect";
-
 export type PickerItem = {
   text: string;
   data?: unknown;
@@ -7,6 +5,6 @@ export type PickerItem = {
 
 export interface PickerSource {
   name: string;
-  getItems: (query: string) => Effect.Effect<PickerItem[], never, never>;
+  getItems: (query: string) => Promise<PickerItem[]>;
   onSelect?: (item: PickerItem) => void;
 }

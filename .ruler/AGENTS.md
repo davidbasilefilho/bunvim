@@ -126,6 +126,14 @@ All reusable code, utilities, types, and APIs must live in the SDK package (`pac
 
 Never duplicate reusable logic across packages. If editor-specific features are needed, extend rather than duplicate. Keep the SDK lean, focused, and portable for third-party plugin authors.
 
+### Modularity
+
+Code must be strongly modular. Prefer small, composable functions and components with a single responsibility. Split UI, state, keyboard handling, data loading, and selection logic into separate units. Avoid monolithic files, tangled control flow, and multi-purpose helpers. If a change touches multiple responsibilities, factor the responsibilities apart before shipping.
+
+### Keybinding Compliance
+
+Keybindings must remain Neovim-compliant. Preserve canonical motions, commands, and mode transitions, especially `:` for command mode and the standard normal, insert, visual, and operator patterns. Custom UI shortcuts must not steal or repurpose established Neovim keys when that would change user expectations.
+
 ### Visual Language
 
 Brutalist aesthetic. No border radius. Element separation via background color contrast. Sharp edges. Functional over decorative.

@@ -1,8 +1,10 @@
 import type { KeyEvent, KeySequenceState } from "@bunvim/sdk";
 import {
+  activePicker,
   bufferActions,
   bufferSource,
   bufferStore,
+  commandSource,
   createInitialState,
   editorUiActions,
   editorUiStore,
@@ -74,6 +76,13 @@ export function EditorView(_props: EditorViewProps) {
     return bufferStore.buffers.find((b) => b.id === win.bufId);
   });
 
+  const commandMode = createMemo(() =>
+    editorUiStore.mode.type === "command" ? editorUiStore.mode : undefined,
+  );
+  const searchMode = createMemo(() =>
+    editorUiStore.mode.type === "search" ? editorUiStore.mode : undefined,
+  );
+
   const editorHeight = createMemo(() => height() - 1);
 
   const openFile = async (filePath: string) => {
@@ -142,7 +151,7 @@ export function EditorView(_props: EditorViewProps) {
         setActivePicker({
           ...grepSource(),
           onSelect: (item) => {
-            const data = item.data as { file: string; line: number } | undefined;
+            const data = item.data as { file: string; line: number; col?: number } | undefined;
             if (data?.file) {
               void openFile(data.file).then(() => {
                 const win = windowStore.windows.find((w) => w.id === windowStore.activeWindowId);
@@ -160,6 +169,18 @@ export function EditorView(_props: EditorViewProps) {
             if (data?.bufId !== undefined) {
               const win = windowStore.windows.find((w) => w.id === windowStore.activeWindowId);
               if (win) windowActions.setBuffer(win.id, data.bufId);
+              editorUiActions.setIsHomeBuffer(false);
+            }
+          },
+        });
+        break;
+      case "commands":
+        setActivePicker({
+          ...commandSource,
+          onSelect: (item) => {
+            const data = item.data as { command: string } | undefined;
+            if (data?.command) {
+              executeCommand(data.command);
             }
           },
         });
@@ -375,7 +396,20 @@ export function EditorView(_props: EditorViewProps) {
   });
 
   useKeyboard((key) => {
-    if (handlePickerKey(key)) return;
+    if (activePicker()) {
+      handlePickerKey(key);
+      return;
+    }
+
+    if (editorUiStore.mode.type === "command" || editorUiStore.mode.type === "search") {
+      if (key.ctrl && key.name === "c") {
+        editorUiActions.setMode(normal());
+      }
+      if (key.name === "escape") {
+        editorUiActions.setMode(normal());
+      }
+      return;
+    }
 
     if (key.ctrl && key.name === "c") {
       const renderer = useRenderer();
@@ -487,28 +521,40 @@ export function EditorView(_props: EditorViewProps) {
         pendingKeys={editorUiStore.pendingKeys}
       />
 
-      <Show when={editorUiStore.mode.type === "command"}>
-        <box position="absolute" left="25%" top="35%" width="50%" style={{ zIndex: 10 }}>
-          <InputPopup
-            label="COMMAND"
-            value={editorUiStore.mode.input}
-            icon=":"
-            onSubmit={() => executeCommand(editorUiStore.mode.input)}
-            onCancel={() => editorUiActions.setMode(normal())}
-          />
-        </box>
+      <Show when={commandMode()}>
+        {(mode) => (
+          <box position="absolute" left="25%" top="35%" width="50%" style={{ zIndex: 10 }}>
+            <InputPopup
+              label="COMMAND"
+              value={mode().input}
+              icon=":"
+              useNativeInput
+              onInput={(value) => {
+                editorUiActions.setMode({ ...mode(), input: value });
+              }}
+              onSubmit={() => executeCommand(mode().input)}
+              onCancel={() => editorUiActions.setMode(normal())}
+            />
+          </box>
+        )}
       </Show>
 
-      <Show when={editorUiStore.mode.type === "search"}>
-        <box position="absolute" left="25%" top="35%" width="50%" style={{ zIndex: 10 }}>
-          <InputPopup
-            label="SEARCH"
-            value={editorUiStore.mode.input}
-            icon={editorUiStore.mode.direction === "forward" ? "/" : "?"}
-            onSubmit={() => editorUiActions.setMode(normal())}
-            onCancel={() => editorUiActions.setMode(normal())}
-          />
-        </box>
+      <Show when={searchMode()}>
+        {(mode) => (
+          <box position="absolute" left="25%" top="35%" width="50%" style={{ zIndex: 10 }}>
+            <InputPopup
+              label="SEARCH"
+              value={mode().input}
+              icon={mode().direction === "forward" ? "/" : "?"}
+              useNativeInput
+              onInput={(value) => {
+                editorUiActions.setMode({ ...mode(), input: value });
+              }}
+              onSubmit={() => editorUiActions.setMode(normal())}
+              onCancel={() => editorUiActions.setMode(normal())}
+            />
+          </box>
+        )}
       </Show>
 
       <Notifications />
