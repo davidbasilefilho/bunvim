@@ -77,7 +77,9 @@ export const grepSource = (file?: string): PickerSource => ({
               const col = parts[2] || "1";
               const rest = parts.slice(3).join(":");
               return {
-                text: file ? `${lineNum}: ${rest.trim()}` : `${fileName}:${lineNum}: ${rest.trim()}`,
+                text: file
+                  ? `${lineNum}: ${rest.trim()}`
+                  : `${fileName}:${lineNum}: ${rest.trim()}`,
                 data: {
                   file: fileName,
                   line: Number.parseInt(lineNum, 10),

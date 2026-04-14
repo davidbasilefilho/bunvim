@@ -40,7 +40,8 @@ function handleKeyEvent(key: KeyEvent, config: TextInputConfig): boolean {
   }
 
   if (!key.ctrl && !key.meta) {
-    const char = key.sequence?.length === 1 ? key.sequence : key.key.length === 1 ? key.key : undefined;
+    const char =
+      key.sequence?.length === 1 ? key.sequence : key.key.length === 1 ? key.key : undefined;
     if (char) {
       config.onChar?.(char);
       return true;

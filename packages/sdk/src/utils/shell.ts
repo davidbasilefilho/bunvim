@@ -1,5 +1,6 @@
-import { $ } from "bun";
 import { join, delimiter } from "node:path";
+
+import { $ } from "bun";
 import { Data, Effect } from "effect";
 
 export class ShellError extends Data.TaggedError("ShellError")<{

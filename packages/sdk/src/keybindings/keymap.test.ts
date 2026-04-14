@@ -30,7 +30,7 @@ describe("processKey", () => {
         shift: false,
         sequence: "",
       },
-      mode: { type: "search", input: "" , direction: "forward" },
+      mode: { type: "search", input: "", direction: "forward" },
       onTimeout: () => {},
     });
 
